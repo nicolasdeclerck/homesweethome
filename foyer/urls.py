@@ -12,6 +12,11 @@ urlpatterns = [
         name="invitation-create",
     ),
     path(
+        "invitations/liste/",
+        views.InvitationsListeView.as_view(),
+        name="invitation-liste",
+    ),
+    path(
         "invitations/<int:pk>/lien/",
         views.InvitationLinkView.as_view(),
         name="invitation-lien",

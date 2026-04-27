@@ -222,6 +222,41 @@ def test_invitation_create_get_renvoie_le_form_vierge():
 
 
 # ---------------------------------------------------------------------------
+# InvitationsListeView
+# ---------------------------------------------------------------------------
+
+
+def test_invitation_liste_renvoie_les_invitations_en_attente_du_foyer():
+    user, foyer = _setup_createur()
+    InvitationFactory(foyer=foyer, prenom="Marie", email="marie@example.com")
+    InvitationFactory(foyer=foyer, prenom="Camille", email="camille@example.com")
+    autre_foyer = FoyerFactory()
+    InvitationFactory(foyer=autre_foyer)
+    client = Client()
+    client.force_login(user)
+
+    response = client.get(reverse("foyer:invitation-liste"))
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert "Marie" in content
+    assert "Camille" in content
+    assert "marie@example.com" in content
+    assert content.count("card pending") == 2  # only this foyer's invitations
+
+
+def test_invitation_liste_refuse_membre_non_createur():
+    foyer = FoyerFactory()
+    autre = MembreFoyerFactory(foyer=foyer)
+    client = Client()
+    client.force_login(autre.user)
+
+    response = client.get(reverse("foyer:invitation-liste"))
+
+    assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
 # InvitationLinkView
 # ---------------------------------------------------------------------------
 

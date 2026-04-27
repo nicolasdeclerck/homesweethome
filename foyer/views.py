@@ -134,6 +134,22 @@ class InvitationCreateView(_CreateurFoyerRequiredMixin, View):
         return response
 
 
+class InvitationsListeView(_CreateurFoyerRequiredMixin, View):
+    template_liste = "foyer/_invitation_liste.html"
+
+    def get(self, request):
+        invitations = list(
+            request.foyer.invitations.filter(
+                statut=Invitation.Statut.EN_ATTENTE,
+            ).order_by("-date_creation")
+        )
+        return render(
+            request,
+            self.template_liste,
+            {"invitations_en_attente": invitations, "foyer": request.foyer},
+        )
+
+
 class InvitationLinkView(_CreateurFoyerRequiredMixin, View):
     template_lien = "foyer/_invitation_lien.html"
 

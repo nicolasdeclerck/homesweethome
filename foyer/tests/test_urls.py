@@ -29,6 +29,7 @@ def test_root_redirects_authenticated_to_mon_foyer():
     "name, kwargs",
     [
         ("foyer:invitation-create", None),
+        ("foyer:invitation-liste", None),
         ("foyer:invitation-lien", {"pk": 1}),
         ("foyer:invitation-annuler", {"pk": 1}),
         ("foyer:invitation-accepter", {"token": "abc-def"}),

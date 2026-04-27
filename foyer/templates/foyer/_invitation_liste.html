@@ -1,4 +1,7 @@
-<div id="invitations-en-attente">
+<div id="invitations-en-attente"
+     hx-get="{% url 'foyer:invitation-liste' %}"
+     hx-trigger="invitations-mises-a-jour from:body"
+     hx-swap="outerHTML">
     {% if invitations_en_attente %}
         {% for invitation in invitations_en_attente %}
         <div class="card pending">
