@@ -57,11 +57,9 @@ services:
     restart: unless-stopped
 
   worker:
+    # Réutilise l'image construite (ou pullée) pour `web` — pas de bloc `build`
+    # ici pour éviter un conflit de tag lors du build parallèle.
     image: ghcr.io/nicolasdeclerck/homesweethome:latest
-    build:
-      context: .
-      args:
-        REQUIREMENTS: requirements/prod.txt
     command: celery -A config worker --loglevel=info
     env_file:
       - .env.prod
