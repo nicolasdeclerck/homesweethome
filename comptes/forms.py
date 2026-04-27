@@ -22,10 +22,10 @@ class EmailAuthenticationForm(AuthenticationForm):
 
     error_messages = {
         "invalid_login": _(
-            "Identifiants invalides. Vérifie ton adresse e-mail et ton mot de passe."
+            "Identifiants invalides. Vérifiez votre adresse e-mail et votre mot de passe."
         ),
         "inactive": _(
-            "Identifiants invalides. Vérifie ton adresse e-mail et ton mot de passe."
+            "Identifiants invalides. Vérifiez votre adresse e-mail et votre mot de passe."
         ),
     }
 

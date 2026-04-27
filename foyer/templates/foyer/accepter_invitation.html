@@ -1,112 +1,154 @@
 {% extends "base.html" %}
+{% load foyer_tags %}
 
 {% block title %}Rejoindre {{ invitation.foyer.nom }} — HomeSweetHome{% endblock %}
 
 {% block content %}
 <div class="public-page">
     <nav class="public-nav">
-        <div class="logo-mark">HSH</div>
-        <span class="muted sm">HomeSweetHome</span>
+        <div class="sb-brand-mark">HSH</div>
+        <span class="sb-brand-name">HomeSweetHome</span>
     </nav>
 
     <div class="public-body">
-        <section>
+        <section class="public-left">
+            <div class="muted sm">Vous avez été invité·e</div>
             <h1 class="hero-title">
-                Tu es invité·e à rejoindre <em>{{ invitation.foyer.nom }}</em>.
+                {{ invitation.foyer.cree_par.first_name|default:invitation.foyer.cree_par.email }}
+                vous invite à rejoindre <em>« {{ invitation.foyer.nom }} »</em>
             </h1>
             <p class="hero-lead">
-                {{ invitation.foyer.cree_par.first_name|default:invitation.foyer.cree_par.email }}
-                t'a invité·e à partager la gestion des tâches du foyer sur HomeSweetHome.
+                Organisez la répartition des charges du foyer ensemble, en tenant compte
+                de la charge physique et mentale de chaque tâche.
             </p>
+            <div class="card minimal">
+                <div class="card-row">
+                    <div class="avatar">
+                        {{ invitation.foyer.cree_par.first_name|default:invitation.foyer.cree_par.email|initiale }}
+                    </div>
+                    <div class="card-grow">
+                        <div class="card-title">
+                            {{ invitation.foyer.cree_par.first_name|default:invitation.foyer.cree_par.email }}
+                        </div>
+                        <div class="muted sm">{{ invitation.foyer.cree_par.email }}</div>
+                    </div>
+                </div>
+            </div>
         </section>
 
-        <section class="form-card">
-            <h2 class="form-title">Bienvenue {{ invitation.prenom }} !</h2>
+        <section class="public-right">
+            <div class="form-card">
+                {% if scenario == "nouveau" %}
+                <div class="stepper">
+                    <div class="step step-current">
+                        <span class="step-num">1</span>
+                        <span class="step-label">Compte</span>
+                    </div>
+                    <span class="step-line"></span>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <span class="step-label">Foyer</span>
+                    </div>
+                </div>
+                {% endif %}
 
-            {% if erreur %}
-            <div class="banner" role="alert">
-                <span>{{ erreur }}</span>
+                <h2 class="form-title">Bienvenue {{ invitation.prenom }} !</h2>
+
+                {% if erreur %}
+                <div class="banner" role="alert">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v.01M12 11v5"/>
+                    </svg>
+                    <span>{{ erreur }}</span>
+                </div>
+                {% endif %}
+
+                {% if scenario == "nouveau" %}
+                    <p class="muted sm">
+                        Choisissez un mot de passe pour finaliser la création de votre compte
+                        ({{ invitation.email }}) et rejoindre le foyer.
+                    </p>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {% if password_form.non_field_errors %}
+                        <div class="banner" role="alert">
+                            <span>{{ password_form.non_field_errors|join:" " }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="field">
+                            <label for="{{ password_form.password.id_for_label }}" class="field-label">
+                                {{ password_form.password.label }}
+                            </label>
+                            {{ password_form.password }}
+                            {% if password_form.password.errors %}
+                            <div class="field-hint" style="color: var(--accent);">
+                                {{ password_form.password.errors|join:" " }}
+                            </div>
+                            {% else %}
+                            <span class="field-hint">8 caractères minimum.</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="field">
+                            <label for="{{ password_form.password_confirm.id_for_label }}" class="field-label">
+                                {{ password_form.password_confirm.label }}
+                            </label>
+                            {{ password_form.password_confirm }}
+                            {% if password_form.password_confirm.errors %}
+                            <div class="field-hint" style="color: var(--accent);">
+                                {{ password_form.password_confirm.errors|join:" " }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-full">
+                            Accepter et rejoindre le foyer
+                        </button>
+                        <p class="muted sm center" style="margin-top: 8px;">
+                            En continuant, vous acceptez les CGU.
+                        </p>
+                    </form>
+
+                {% elif scenario == "user_existant_connecte" %}
+                    <p class="muted sm">
+                        Vous êtes connecté·e en tant que <strong>{{ request.user.email }}</strong>.
+                        Confirmez pour rejoindre le foyer.
+                    </p>
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary btn-full">
+                            Rejoindre le foyer
+                        </button>
+                    </form>
+
+                {% elif scenario == "user_existant_non_connecte" %}
+                    <p class="muted sm">
+                        Un compte existe déjà pour <strong>{{ invitation.email }}</strong>.
+                        Connectez-vous pour accepter l'invitation.
+                    </p>
+                    <a href="{{ login_url }}" class="btn btn-primary btn-full">
+                        Se connecter
+                    </a>
+
+                {% elif scenario == "user_existant_mauvais_compte" %}
+                    <p class="muted sm">
+                        Vous êtes connecté·e en tant que <strong>{{ request.user.email }}</strong>,
+                        mais cette invitation est destinée à <strong>{{ invitation.email }}</strong>.
+                        Déconnectez-vous puis suivez à nouveau le lien d'invitation.
+                    </p>
+                    <form method="post" action="{% url 'comptes:deconnexion' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary btn-full">
+                            Se déconnecter
+                        </button>
+                    </form>
+                {% endif %}
             </div>
-            {% endif %}
-
-            {% if scenario == "nouveau" %}
-                <p class="muted sm">
-                    Choisis un mot de passe pour finaliser la création de ton compte
-                    ({{ invitation.email }}) et rejoindre le foyer.
-                </p>
-
-                <form method="post" novalidate>
-                    {% csrf_token %}
-
-                    {% if password_form.non_field_errors %}
-                    <div class="banner" role="alert">
-                        <span>{{ password_form.non_field_errors|join:" " }}</span>
-                    </div>
-                    {% endif %}
-
-                    <div class="field">
-                        <label for="{{ password_form.password.id_for_label }}" class="field-label">
-                            {{ password_form.password.label }}
-                        </label>
-                        {{ password_form.password }}
-                        {% if password_form.password.errors %}
-                        <div class="field-hint" style="color: var(--accent);">
-                            {{ password_form.password.errors|join:" " }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="field">
-                        <label for="{{ password_form.password_confirm.id_for_label }}" class="field-label">
-                            {{ password_form.password_confirm.label }}
-                        </label>
-                        {{ password_form.password_confirm }}
-                        {% if password_form.password_confirm.errors %}
-                        <div class="field-hint" style="color: var(--accent);">
-                            {{ password_form.password_confirm.errors|join:" " }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <button type="submit" class="btn btn-primary btn-full">
-                        Rejoindre le foyer
-                    </button>
-                </form>
-
-            {% elif scenario == "user_existant_connecte" %}
-                <p class="muted sm">
-                    Tu es connecté·e en tant que <strong>{{ request.user.email }}</strong>.
-                    Confirme pour rejoindre le foyer.
-                </p>
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary btn-full">
-                        Rejoindre le foyer
-                    </button>
-                </form>
-
-            {% elif scenario == "user_existant_non_connecte" %}
-                <p class="muted sm">
-                    Un compte existe déjà pour <strong>{{ invitation.email }}</strong>.
-                    Connecte-toi pour accepter l'invitation.
-                </p>
-                <a href="{{ login_url }}" class="btn btn-primary btn-full">
-                    Se connecter
-                </a>
-
-            {% elif scenario == "user_existant_mauvais_compte" %}
-                <p class="muted sm">
-                    Tu es connecté·e en tant que <strong>{{ request.user.email }}</strong>,
-                    mais cette invitation est destinée à <strong>{{ invitation.email }}</strong>.
-                    Déconnecte-toi puis suis à nouveau le lien d'invitation.
-                </p>
-                <form method="post" action="{% url 'comptes:deconnexion' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary btn-full">
-                        Se déconnecter
-                    </button>
-                </form>
-            {% endif %}
         </section>
     </div>
 </div>

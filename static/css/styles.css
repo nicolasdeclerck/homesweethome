@@ -27,12 +27,52 @@ html, body {
   font-family: var(--font);
   font-size: 14px;
   color: var(--ink);
-  background: #f4f4f2;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.005em;
 }
 
-#root { height: 100vh; }
+body { min-height: 100vh; }
+
+/* ── App shell (sidebar + main content) ─── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+.app-shell .sidebar {
+  border-right: 1px solid var(--line);
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.app-shell .sb-item {
+  cursor: pointer;
+  text-decoration: none;
+}
+.app-shell .sb-main {
+  padding: 32px 48px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.app-shell .sb-main > .content-medium,
+.app-shell .sb-main > .content-narrow { margin: 0 auto; }
+
+@media (max-width: 720px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .app-shell .sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    overflow-x: auto;
+  }
+  .app-shell .sidebar .sb-brand { border-bottom: 0; padding: 4px 10px; margin: 0; }
+  .app-shell .sidebar .sb-section { display: none; }
+  .app-shell .sb-main { padding: 24px 20px; }
+}
 
 /* ── Frame chrome (browser-window-lite per screen) ───── */
 .frame {
