@@ -1,0 +1,115 @@
+# docker-compose pour la production.
+#
+# Premier déploiement (build local) :
+#   docker compose -f docker-compose.prod.yml build
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Déploiements ultérieurs (image GHCR) : commenter la section `build:` du
+# service `web` et `worker`, puis :
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Le réseau `n8n-traefik_default` doit exister (créé par la stack Traefik).
+
+services:
+  web:
+    image: ghcr.io/nicolasdeclerck/homesweethome:latest
+    build:
+      context: .
+      args:
+        REQUIREMENTS: requirements/prod.txt
+    command: >
+      gunicorn config.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers 3
+      --access-logfile -
+      --error-logfile -
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    volumes:
+      - static_files:/app/staticfiles
+      - media_files:/app/media
+    networks:
+      - traefik
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=n8n-traefik_default"
+      # HTTP → redirection HTTPS
+      - "traefik.http.routers.homesweethome-http.entrypoints=web"
+      - "traefik.http.routers.homesweethome-http.rule=Host(`homesweethome.nickorp.com`)"
+      - "traefik.http.routers.homesweethome-http.middlewares=homesweethome-redirect-to-https"
+      - "traefik.http.middlewares.homesweethome-redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.homesweethome-redirect-to-https.redirectscheme.permanent=true"
+      # HTTPS
+      - "traefik.http.routers.homesweethome.entrypoints=websecure"
+      - "traefik.http.routers.homesweethome.rule=Host(`homesweethome.nickorp.com`)"
+      - "traefik.http.routers.homesweethome.tls=true"
+      - "traefik.http.routers.homesweethome.tls.certresolver=myresolver"
+      - "traefik.http.services.homesweethome.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  worker:
+    # Réutilise l'image construite (ou pullée) pour `web` — pas de bloc `build`
+    # ici pour éviter un conflit de tag lors du build parallèle.
+    image: ghcr.io/nicolasdeclerck/homesweethome:latest
+    command: celery -A config worker --loglevel=info
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    env_file:
+      - .env.prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - internal
+    restart: unless-stopped
+
+networks:
+  traefik:
+    name: n8n-traefik_default
+    external: true
+  internal:
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:
+  media_files:
