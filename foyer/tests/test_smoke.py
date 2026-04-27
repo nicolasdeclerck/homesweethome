@@ -10,7 +10,11 @@ def test_app_is_installed():
 
 def test_urls_module_is_importable():
     assert foyer_urls.app_name == "foyer"
-    assert foyer_urls.urlpatterns == []
+    assert foyer_urls.urlpatterns
+
+
+def test_mon_foyer_url_resolves():
+    assert reverse("foyer:mon-foyer") == "/foyer/"
 
 
 def test_admin_url_resolves():
