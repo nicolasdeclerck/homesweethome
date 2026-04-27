@@ -1,0 +1,65 @@
+<div class="card" id="invitation-form-card">
+    {% if deja_en_attente %}
+    <div class="card-title">Une invitation est déjà en cours</div>
+    <p class="muted sm">
+        Une invitation pour <strong>{{ invitation.email }}</strong> existe déjà.
+        Copie le lien ci-dessous pour la relancer, ou annule-la dans la liste plus bas.
+    </p>
+    {% else %}
+    <div class="card-title">Lien d'invitation pour {{ invitation.prenom }}</div>
+    <p class="muted sm">
+        Transmets ce lien à <strong>{{ invitation.email }}</strong> par le canal de
+        ton choix. Il expire le {{ invitation.date_expiration|date:"j F Y" }}.
+    </p>
+    {% endif %}
+
+    <div class="field">
+        <label class="field-label" for="invitation-lien-input-{{ invitation.pk }}">
+            Lien à partager
+        </label>
+        <input type="text"
+               id="invitation-lien-input-{{ invitation.pk }}"
+               class="field-input"
+               readonly
+               value="{{ lien }}">
+    </div>
+
+    <div class="btn-row end">
+        <button type="button"
+                class="btn btn-ghost btn-sm"
+                hx-get="{% url 'foyer:invitation-create' %}"
+                hx-target="#invitation-form-zone"
+                hx-swap="innerHTML">
+            Nouvelle invitation
+        </button>
+        <button type="button"
+                class="btn btn-primary btn-sm"
+                data-copy-target="invitation-lien-input-{{ invitation.pk }}"
+                data-copy-feedback-text="Copié !">
+            Copier le lien
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    const root = document.getElementById("invitation-form-card");
+    if (!root) return;
+    const button = root.querySelector("[data-copy-target]");
+    if (!button) return;
+    const input = document.getElementById(button.dataset.copyTarget);
+    if (!input) return;
+    button.addEventListener("click", async function() {
+        const original = button.textContent;
+        try {
+            await navigator.clipboard.writeText(input.value);
+            button.textContent = button.dataset.copyFeedbackText || "Copié !";
+        } catch (err) {
+            input.select();
+            document.execCommand("copy");
+            button.textContent = button.dataset.copyFeedbackText || "Copié !";
+        }
+        setTimeout(function() { button.textContent = original; }, 1800);
+    });
+})();
+</script>

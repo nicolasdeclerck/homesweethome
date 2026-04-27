@@ -28,5 +28,19 @@
         </div>
         {% endfor %}
     </section>
+
+    {% if est_createur %}
+    <section>
+        <div class="cat-head">Inviter un membre</div>
+        <div id="invitation-form-zone">
+            {% include "foyer/_invitation_form.html" %}
+        </div>
+    </section>
+
+    <section>
+        <div class="cat-head">Invitations en attente</div>
+        {% include "foyer/_invitation_liste.html" %}
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

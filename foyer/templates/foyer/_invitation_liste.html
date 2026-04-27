@@ -1,0 +1,37 @@
+<div id="invitations-en-attente">
+    {% if invitations_en_attente %}
+        {% for invitation in invitations_en_attente %}
+        <div class="card pending">
+            <div class="card-row">
+                <div class="card-grow">
+                    <div class="card-title">{{ invitation.prenom }}</div>
+                    <div class="muted sm">
+                        {{ invitation.email }} · expire le {{ invitation.date_expiration|date:"j F Y" }}
+                    </div>
+                </div>
+                <span class="tag tag-warn">En attente</span>
+            </div>
+
+            <div class="btn-row end">
+                <button type="button"
+                        class="btn btn-ghost btn-sm"
+                        hx-get="{% url 'foyer:invitation-lien' pk=invitation.pk %}"
+                        hx-target="#invitation-form-zone"
+                        hx-swap="innerHTML">
+                    Copier le lien
+                </button>
+                <button type="button"
+                        class="btn btn-ghost btn-sm"
+                        hx-post="{% url 'foyer:invitation-annuler' pk=invitation.pk %}"
+                        hx-confirm="Annuler l'invitation pour {{ invitation.email }} ?"
+                        hx-target="#invitations-en-attente"
+                        hx-swap="outerHTML">
+                    Annuler
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="muted sm">Aucune invitation en attente.</div>
+    {% endif %}
+</div>
