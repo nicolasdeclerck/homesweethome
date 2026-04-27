@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Invitation invalide — HomeSweetHome{% endblock %}
+
+{% block content %}
+<div class="public-page">
+    <nav class="public-nav">
+        <div class="logo-mark">HSH</div>
+        <span class="muted sm">HomeSweetHome</span>
+    </nav>
+
+    <div class="public-body">
+        <section>
+            <h1 class="hero-title">Ce lien d'invitation n'est plus valide.</h1>
+            <p class="hero-lead">
+                Le lien a peut-être expiré, été annulé, ou déjà utilisé.
+                Demande à la personne qui t'a invité·e d'en générer un nouveau.
+            </p>
+        </section>
+
+        <section class="form-card">
+            <h2 class="form-title">Tu as déjà un compte ?</h2>
+            <p class="muted sm">
+                Si tu es déjà membre d'un foyer, connecte-toi pour le retrouver.
+            </p>
+            <a href="{% url 'comptes:connexion' %}" class="btn btn-primary btn-full">
+                Se connecter
+            </a>
+        </section>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+<div class="card" id="invitation-form-card">
+    <div class="card-title">Inviter un membre</div>
+    <p class="muted sm">
+        Génère un lien d'invitation à transmettre à la personne par le canal de ton choix
+        (SMS, messagerie...).
+    </p>
+
+    <form method="post"
+          action="{% url 'foyer:invitation-create' %}"
+          hx-post="{% url 'foyer:invitation-create' %}"
+          hx-target="#invitation-form-zone"
+          hx-swap="innerHTML"
+          novalidate>
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="{{ invitation_form.email.id_for_label }}" class="field-label">
+                {{ invitation_form.email.label }}
+            </label>
+            {{ invitation_form.email }}
+            {% if invitation_form.email.errors %}
+            <div class="field-hint" style="color: var(--accent);">
+                {{ invitation_form.email.errors|join:" " }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ invitation_form.prenom.id_for_label }}" class="field-label">
+                {{ invitation_form.prenom.label }}
+            </label>
+            {{ invitation_form.prenom }}
+            {% if invitation_form.prenom.errors %}
+            <div class="field-hint" style="color: var(--accent);">
+                {{ invitation_form.prenom.errors|join:" " }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="btn-row end">
+            <button type="submit" class="btn btn-primary btn-sm">Générer le lien</button>
+        </div>
+    </form>
+</div>
