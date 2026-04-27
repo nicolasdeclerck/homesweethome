@@ -17,6 +17,8 @@ Des skills custom sont disponibles dans `.claude/skills/`. Tu dois les utiliser 
 
 C'est le point d'entrée systématique pour tout travail de développement. Le skill se charge lui-même de déterminer si un brainstorming préalable est nécessaire avant de créer l'issue. Ne pas créer d'issues GitHub manuellement sans passer par ce skill.
 
+**Cas d'une User Story (US-xxx)** : si l'utilisateur demande de travailler sur une US référencée par son identifiant (ex. « US101 », « US-204 »), il faut **d'abord récupérer la spec dans Notion** (base User Stories, parcours utilisateurs : https://www.notion.so/34f7cab116d38095ae93e33baf7824d4) puis lancer `create-github-issue` en lui transmettant cette spec, avant toute implémentation.
+
 ### `brainstorming`
 **Déclencheur** : appelé par `create-github-issue` si nécessaire — ne pas l'invoquer directement.
 
@@ -24,6 +26,8 @@ C'est le point d'entrée systématique pour tout travail de développement. Le s
 **Déclencheur** : uniquement si l'utilisateur demande explicitement de développer un ticket existant.
 
 Ne pas l'utiliser de sa propre initiative. L'implémentation n'est lancée que sur instruction directe de l'utilisateur.
+
+**Synchronisation Notion** : si le ticket implémenté correspond à une User Story Notion (US-xxx), il faut **passer l'État de la page Notion correspondante à « En cours »** dès le début de la phase d'implémentation (création de la branche), via le MCP Notion (`notion-update-page`). À la fermeture de la PR (merge), la même page sera passée à « Terminé ».
 
 ---
 
@@ -40,6 +44,7 @@ Ne pas l'utiliser de sa propre initiative. L'implémentation n'est lancée que s
 - **HTMX** — interactions dynamiques sans rechargement de page
 - **JS natif** — interactions légères complémentaires
 - **WhiteNoise** — service des fichiers statiques en production
+- **Design system HomeSweetHome** — référence visuelle et composants : https://api.anthropic.com/v1/design/h/KVbmiQwnJpeiyarsbi-1yw?open_file=Design+System.html
 
 ### Infrastructure
 - **Docker / Docker Compose** — services : `web`, `db`, `redis`, `worker`
@@ -76,6 +81,12 @@ Ne pas l'utiliser de sa propre initiative. L'implémentation n'est lancée que s
 - Les endpoints HTMX retournent des fragments HTML partiels uniquement
 - Toujours gérer le fallback non-HTMX (redirect) sur les vues mixtes
 - Utiliser `HX-Trigger` pour les effets de bord (ex. mise à jour du total de charge)
+
+### Design system
+
+- Toute implémentation d'écran ou de composant frontend doit s'aligner sur le **design system HomeSweetHome** (couleurs, typographie, composants, espacements) : https://api.anthropic.com/v1/design/h/KVbmiQwnJpeiyarsbi-1yw?open_file=Design+System.html
+- Avant d'écrire un template ou du CSS, consulter le design system pour réutiliser les tokens et composants existants plutôt que d'en inventer.
+- Si un besoin n'est pas couvert par le design system, le signaler à l'utilisateur avant de créer un nouveau composant ad hoc.
 
 ### Celery
 

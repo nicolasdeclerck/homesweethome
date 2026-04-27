@@ -37,11 +37,17 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "comptes",
     "foyer",
     "activites",
     "evaluations",
     "planification",
 ]
+
+AUTH_USER_MODEL = "comptes.User"
+LOGIN_URL = "comptes:connexion"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "comptes:connexion"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -119,6 +125,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Bienvenue — HomeSweetHome{% endblock %}
+
+{% block content %}
+<div class="centered-page">
+    <h1 class="page-title center">Bienvenue sur HomeSweetHome</h1>
+    <p class="muted center">
+        Tu es connecté·e. La home complète arrivera dans une prochaine US.
+    </p>
+    <form method="post" action="{% url 'comptes:deconnexion' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-ghost btn-full">Se déconnecter</button>
+    </form>
+</div>
+{% endblock %}
