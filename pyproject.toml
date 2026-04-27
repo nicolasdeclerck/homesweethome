@@ -37,6 +37,7 @@ python_files = ["tests.py", "test_*.py", "*_tests.py"]
 addopts = [
     "--strict-markers",
     "--reuse-db",
+    "--ds=config.settings.test",
 ]
 
 [tool.coverage.run]

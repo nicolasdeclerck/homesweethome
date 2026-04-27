@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Connexion — HomeSweetHome{% endblock %}
+
+{% block content %}
+<div class="public-page">
+    <nav class="public-nav">
+        <div class="logo-mark">HSH</div>
+        <span class="muted sm">HomeSweetHome</span>
+    </nav>
+
+    <div class="public-body">
+        <section>
+            <h1 class="hero-title">Une charge ménagère partagée, sans charge mentale.</h1>
+            <p class="hero-lead">
+                Connecte-toi pour retrouver ton foyer, suivre les activités du quotidien
+                et répartir équitablement la charge avec ton conjoint.
+            </p>
+        </section>
+
+        <section class="form-card">
+            <h2 class="form-title">Connexion</h2>
+
+            {% if form.non_field_errors %}
+            <div class="banner" role="alert">
+                <span>{{ form.non_field_errors|join:" " }}</span>
+            </div>
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="field">
+                    <label for="{{ form.username.id_for_label }}" class="field-label">
+                        {{ form.username.label }}
+                    </label>
+                    {{ form.username }}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.password.id_for_label }}" class="field-label">
+                        {{ form.password.label }}
+                    </label>
+                    {{ form.password }}
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">Se connecter</button>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}
