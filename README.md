@@ -101,10 +101,66 @@ Le fichier de settings actif est piloté par la variable d'environnement
 - **CI** (`.github/workflows/ci.yml`) — déclenché sur PR et push `main` :
   étape `lint` (ruff) puis `tests` (pytest + coverage avec gate 80 %).
   Postgres et Redis tournent en services Actions.
-- **CD** (`.github/workflows/cd.yml`) — déclenché sur push `main` : build de
-  l'image Docker et push vers `ghcr.io/nicolasdeclerck/homesweethome`.
-  L'étape de déploiement sur le VPS est en placeholder (voir « À paramétrer »
-  ci-dessous).
+- **CD** (`.github/workflows/cd.yml`) — déclenché sur push `main` :
+  1. **build-and-push** : build de l'image Docker et push vers
+     `ghcr.io/nicolasdeclerck/homesweethome`.
+  2. **deploy** : SSH sur le VPS et exécution de la séquence de
+     déploiement (cf. section *Déploiement* ci-dessous). Nécessite les
+     secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` (cf. *À
+     paramétrer*).
+
+## Déploiement
+
+### Premier déploiement (manuel sur VPS)
+
+Sur un VPS qui héberge déjà Traefik (réseau Docker partagé
+`n8n-traefik_default`) :
+
+```bash
+cd /home/ubuntu/n8n-traefik/repos/
+git clone -b main git@github.com:nicolasdeclerck/homesweethome.git
+cd homesweethome
+
+# Préparer .env.prod à partir du template
+cp .env.prod.example .env.prod
+# Générer SECRET_KEY et POSTGRES_PASSWORD :
+#   python3 -c 'import secrets; print(secrets.token_urlsafe(60))'
+#   openssl rand -base64 32 | tr -d '/+='
+# puis éditer .env.prod
+
+# Build local pour le tout premier setup (avant que GHCR ait la première image)
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+
+# Initialiser Django
+docker compose -f docker-compose.prod.yml exec web python manage.py migrate --noinput
+docker compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml restart web   # recharger le manifest WhiteNoise
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+```
+
+### Déploiements suivants
+
+Tout est automatisé par le workflow CD : à chaque merge sur `main`, l'image
+est buildée, pushée sur GHCR, puis le runner SSH sur le VPS et exécute la
+séquence. La séquence reproduite manuellement, en cas de besoin :
+
+```bash
+cd /home/ubuntu/n8n-traefik/repos/homesweethome
+git fetch origin main && git checkout main && git reset --hard origin/main
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+docker compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+docker compose -f docker-compose.prod.yml restart web
+docker image prune -f
+```
+
+> **Pourquoi `restart web` après `collectstatic`** : avec
+> `whitenoise.storage.CompressedManifestStaticFilesStorage`, Django charge
+> `staticfiles.json` en mémoire au démarrage. Si on `collectstatic` sur un
+> processus déjà démarré, le manifest mémoire est désynchronisé du disque
+> et les URLs `{% static %}` perdent leur hash → 404 sur les CSS/JS.
 
 ## À paramétrer manuellement
 
@@ -112,36 +168,31 @@ Ce que la stack ne peut pas configurer toute seule et qui doit être fait par
 l'utilisateur :
 
 ### GitHub
-- **Permissions GHCR** : vérifier dans
-  *Settings → Actions → General → Workflow permissions* que `Read and write`
-  est activé (nécessaire pour pousser sur GHCR avec le `GITHUB_TOKEN`
-  automatique).
-- **Visibilité de l'image** : après le premier push, l'image sera privée par
-  défaut sur GHCR. La rendre publique (si souhaité) depuis l'onglet *Packages*
-  du repo.
+- **Permissions Workflows** : *Settings → Actions → General → Workflow
+  permissions* → activer *Read and write* (nécessaire pour pousser sur
+  GHCR avec le `GITHUB_TOKEN` automatique).
+- **Visibilité de l'image GHCR** : après le premier push, l'image est
+  privée par défaut. La rendre publique depuis l'onglet *Packages* du
+  repo si tu ne veux pas avoir à `docker login` sur le VPS.
+- **Secrets pour le déploiement automatique** : *Settings → Secrets and
+  variables → Actions* → ajouter :
+  - `DEPLOY_HOST` — IP publique ou hostname du VPS
+  - `DEPLOY_USER` — utilisateur SSH (ex. `ubuntu`)
+  - `DEPLOY_SSH_KEY` — clé SSH privée **dédiée au déploiement** (sans
+    passphrase). La clé publique correspondante doit être ajoutée dans
+    `~/.ssh/authorized_keys` du `DEPLOY_USER` sur le VPS.
 
 ### Service SMTP de production
-Choisir un fournisseur (Brevo / Resend / Mailgun) et créer le compte. Reporter
-les credentials dans les variables d'environnement de l'hôte de prod :
-`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
-`EMAIL_USE_TLS`, `DEFAULT_FROM_EMAIL`.
+Choisir un fournisseur (Brevo / Resend / Mailgun) et créer le compte.
+Reporter les credentials dans `.env.prod` du VPS : `EMAIL_HOST`,
+`EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`,
+`DEFAULT_FROM_EMAIL`.
 
-### Hébergement (VPS Traefik)
-- **Secrets GitHub à ajouter** quand le VPS sera prêt (pour câbler le job
-  `deploy` du workflow CD) :
-  - `DEPLOY_SSH_KEY` — clé privée SSH du déploiement
-  - `DEPLOY_HOST` — hostname du VPS
-  - `DEPLOY_USER` — utilisateur SSH
-- **Variables d'environnement à set sur le VPS** :
-  - `DJANGO_SETTINGS_MODULE=config.settings.prod`
-  - `DJANGO_SECRET_KEY` (regénérée, ≥ 50 caractères)
-  - `DJANGO_ALLOWED_HOSTS` (le domaine cible)
-  - `POSTGRES_*`, `REDIS_URL`, `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`
-  - `EMAIL_*` (cf. section SMTP)
-- **Labels Traefik** : à ajouter sur le service `web` dans le compose de prod
-  une fois le domaine connu.
-- **Job `deploy`** : décommenter et compléter dans `.github/workflows/cd.yml`
-  une fois les secrets ci-dessus disponibles.
+### VPS
+- **Variables d'environnement** dans `.env.prod` (cf. `.env.prod.example`).
+- **DNS** : un record A/CNAME doit pointer le domaine cible vers l'IP
+  publique du VPS *avant* le premier `up -d` (sinon Let's Encrypt ne peut
+  pas valider).
 
 ## Conventions
 

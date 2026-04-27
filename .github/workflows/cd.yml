@@ -59,12 +59,45 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
     steps:
-      - name: Placeholder — déploiement à câbler
-        run: |
-          echo "::warning::Étape de déploiement non câblée."
-          echo "À configurer une fois l'hôte (VPS Traefik) connu :"
-          echo "  - Ajouter un secret SSH (DEPLOY_SSH_KEY, DEPLOY_HOST, DEPLOY_USER)"
-          echo "  - Utiliser appleboy/ssh-action pour exécuter sur l'hôte :"
-          echo "      docker compose pull && docker compose up -d --remove-orphans"
-          echo "  - Configurer les labels Traefik dans le docker-compose de prod"
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: GHCR_USER,GHCR_TOKEN
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /home/ubuntu/n8n-traefik/repos/homesweethome
+
+            # Login GHCR avec le GITHUB_TOKEN du workflow (fonctionne que
+            # l'image soit publique ou privée).
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            # Synchroniser le code avec main
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            # Récupérer la nouvelle image depuis GHCR
+            docker compose -f docker-compose.prod.yml pull
+
+            # Recréer les services avec la nouvelle image (pas de --build)
+            docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+
+            # Migrations + statiques + restart pour recharger le manifest
+            docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
+            docker compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+            docker compose -f docker-compose.prod.yml restart web
+
+            # Cleanup
+            docker logout ghcr.io
+            docker image prune -f
