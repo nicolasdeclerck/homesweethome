@@ -39,6 +39,9 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 COPY --chown=app:app . /app
 
+RUN mkdir -p /app/staticfiles /app/media \
+    && chown -R app:app /app/staticfiles /app/media
+
 USER app
 
 EXPOSE 8000
