@@ -1,3 +1,4 @@
+{% load foyer_tags %}
 <div id="invitations-en-attente"
      hx-get="{% url 'foyer:invitation-liste' %}"
      hx-trigger="invitations-mises-a-jour from:body"
@@ -6,6 +7,7 @@
         {% for invitation in invitations_en_attente %}
         <div class="card pending">
             <div class="card-row">
+                <div class="avatar avatar-empty">{{ invitation.prenom|initiale }}</div>
                 <div class="card-grow">
                     <div class="card-title">{{ invitation.prenom }}</div>
                     <div class="muted sm">
@@ -34,7 +36,5 @@
             </div>
         </div>
         {% endfor %}
-    {% else %}
-        <div class="muted sm">Aucune invitation en attente.</div>
     {% endif %}
 </div>

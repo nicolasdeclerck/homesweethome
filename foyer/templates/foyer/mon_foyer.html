@@ -1,13 +1,32 @@
-{% extends "base.html" %}
+{% extends "app_base.html" %}
+{% load foyer_tags %}
 
 {% block title %}{{ foyer.nom }} — HomeSweetHome{% endblock %}
 
-{% block content %}
-<div class="centered-page">
+{% block app_content %}
+<div class="content-medium">
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+        <div class="success-banner" role="status">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12l5 5L20 7"/>
+            </svg>
+            <span>{{ message }}</span>
+        </div>
+        {% endif %}
+    {% endfor %}
+
     <header class="page-head">
         <div>
-            <h1 class="page-title">{{ foyer.nom }}</h1>
-            <p class="muted sm">Créé le {{ foyer.date_creation|date:"j F Y" }}</p>
+            <h1 class="page-title">Membres</h1>
+            <p class="muted">
+                {{ foyer.nom }} ·
+                {{ membres|length }} membre{{ membres|length|pluralize }}
+                {% if invitations_en_attente %}
+                · {{ invitations_en_attente|length }} en attente
+                {% endif %}
+            </p>
         </div>
         <form method="post" action="{% url 'comptes:deconnexion' %}">
             {% csrf_token %}
@@ -16,31 +35,61 @@
     </header>
 
     <section>
-        <div class="cat-head">Membres du foyer</div>
         {% for membre in membres %}
         <div class="card">
             <div class="card-row">
-                <div class="card-grow">
-                    <div class="card-title">{{ membre.user.email }}</div>
-                    <div class="muted sm">Membre depuis le {{ membre.date_arrivee|date:"j F Y" }}</div>
+                <div class="avatar {% if membre.user_id != foyer.cree_par_id %}avatar-2{% endif %}">
+                    {{ membre.user.first_name|default:membre.user.email|initiale }}
                 </div>
+                <div class="card-grow">
+                    <div class="card-title">
+                        {{ membre.user.first_name|default:membre.user.email }}
+                        {% if membre.user.first_name %}
+                        <span class="muted sm">· {{ membre.user.email }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="muted sm">
+                        {% if membre.user_id == foyer.cree_par_id %}Administrateur{% else %}Membre{% endif %}
+                        · Membre depuis le {{ membre.date_arrivee|date:"j F Y" }}
+                    </div>
+                </div>
+                {% if membre.user_id == request.user.pk %}
+                <span class="tag">Vous</span>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
+
+        {% if est_createur %}
+            {% include "foyer/_invitation_liste.html" %}
+        {% endif %}
     </section>
 
     {% if est_createur %}
-    <section>
-        <div class="cat-head">Inviter un membre</div>
-        <div id="invitation-form-zone">
-            {% include "foyer/_invitation_form.html" %}
+        {% if membres|length == 1 and not invitations_en_attente %}
+        <div class="empty">
+            <div class="empty-illu" aria-hidden="true"></div>
+            <div class="empty-title">Vous êtes seul·e ici</div>
+            <div class="empty-sub">
+                Invitez votre conjoint·e pour commencer à répartir les tâches du foyer.
+            </div>
         </div>
-    </section>
+        {% endif %}
 
-    <section>
-        <div class="cat-head">Invitations en attente</div>
-        {% include "foyer/_invitation_liste.html" %}
-    </section>
+        <section style="margin-top: 24px;">
+            <div class="cat-head">Inviter un membre</div>
+            <div id="invitation-form-zone">
+                {% include "foyer/_invitation_form.html" %}
+            </div>
+        </section>
+
+        {% if membres|length >= 2 %}
+        <div class="next-step">
+            <div class="muted sm">Prochaine étape</div>
+            <div class="card-title">Lister ensemble vos activités</div>
+            <p class="muted sm">Bientôt disponible — vous pourrez recenser les tâches du foyer.</p>
+        </div>
+        {% endif %}
     {% endif %}
 </div>
 {% endblock %}

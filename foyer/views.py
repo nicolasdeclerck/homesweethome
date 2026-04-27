@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden
@@ -43,6 +44,7 @@ class MonFoyerView(LoginRequiredMixin, TemplateView):
         context["foyer"] = foyer
         context["membres"] = foyer.membres.select_related("user").all()
         context["est_createur"] = est_createur
+        context["active_nav"] = "membres"
         if est_createur:
             context["invitation_form"] = InvitationCreationForm()
             context["invitations_en_attente"] = self._invitations_en_attente(foyer)
@@ -231,6 +233,10 @@ class AccepterInvitationView(View):
                     self._contexte_acceptation(request, invitation, erreur=str(exc)),
                     status=400,
                 )
+            messages.success(
+                request,
+                f"Bienvenue dans le foyer « {invitation.foyer.nom} ».",
+            )
             return redirect(self.success_url)
 
         if scenario == "user_existant_non_connecte":
@@ -269,6 +275,10 @@ class AccepterInvitationView(View):
             )
 
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        messages.success(
+            request,
+            f"Bienvenue dans le foyer « {invitation.foyer.nom} ».",
+        )
         return redirect(self.success_url)
 
     @staticmethod

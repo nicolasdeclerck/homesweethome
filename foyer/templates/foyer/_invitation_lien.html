@@ -3,13 +3,20 @@
     <div class="card-title">Une invitation est déjà en cours</div>
     <p class="muted sm">
         Une invitation pour <strong>{{ invitation.email }}</strong> existe déjà.
-        Copie le lien ci-dessous pour la relancer, ou annule-la dans la liste plus bas.
+        Copiez le lien ci-dessous pour la relancer, ou annulez-la dans la liste plus haut.
     </p>
     {% else %}
+    <div class="success-banner" role="status">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12l5 5L20 7"/>
+        </svg>
+        <span>Invitation créée pour {{ invitation.prenom }}.</span>
+    </div>
     <div class="card-title">Lien d'invitation pour {{ invitation.prenom }}</div>
     <p class="muted sm">
-        Transmets ce lien à <strong>{{ invitation.email }}</strong> par le canal de
-        ton choix. Il expire le {{ invitation.date_expiration|date:"j F Y" }}.
+        Transmettez ce lien à <strong>{{ invitation.email }}</strong> par le canal de votre choix.
+        Il expire le {{ invitation.date_expiration|date:"j F Y" }}.
     </p>
     {% endif %}
 

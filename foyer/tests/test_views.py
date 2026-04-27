@@ -64,7 +64,7 @@ def test_mon_foyer_affiche_section_invitation_pour_le_createur():
 
     content = response.content.decode("utf-8")
     assert "Inviter un membre" in content
-    assert "Invitations en attente" in content
+    assert "Générer le lien" in content
 
 
 def test_mon_foyer_n_affiche_pas_section_invitation_pour_un_membre_non_createur():
@@ -77,7 +77,7 @@ def test_mon_foyer_n_affiche_pas_section_invitation_pour_un_membre_non_createur(
 
     content = response.content.decode("utf-8")
     assert "Inviter un membre" not in content
-    assert "Invitations en attente" not in content
+    assert "Générer le lien" not in content
 
 
 def test_mon_foyer_liste_les_invitations_en_attente():
@@ -421,8 +421,8 @@ def test_accepter_get_scenario_nouveau_affiche_form_creation_password():
     content = response.content.decode("utf-8")
     assert response.status_code == 200
     assert "Bienvenue Marie" in content
-    assert "Choisis un mot de passe" in content
-    assert "Confirme le mot de passe" in content
+    assert "Mot de passe" in content
+    assert "Confirmer le mot de passe" in content
 
 
 def test_accepter_get_scenario_user_existant_non_connecte_propose_login():
@@ -450,8 +450,8 @@ def test_accepter_get_scenario_user_existant_connecte_affiche_confirmation():
     )
 
     content = response.content.decode("utf-8")
-    assert "Confirme pour rejoindre" in content
-    assert "Choisis un mot de passe" not in content
+    assert "Confirmez pour rejoindre" in content
+    assert "Confirmer le mot de passe" not in content
 
 
 def test_accepter_get_scenario_user_existant_mauvais_compte_propose_logout():
@@ -465,7 +465,7 @@ def test_accepter_get_scenario_user_existant_mauvais_compte_propose_logout():
     )
 
     content = response.content.decode("utf-8")
-    assert "Déconnecte-toi" in content
+    assert "Déconnectez-vous" in content
 
 
 # ---------------------------------------------------------------------------

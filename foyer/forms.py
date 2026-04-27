@@ -31,7 +31,7 @@ class InvitationCreationForm(forms.Form):
 
 class AccepterInvitationNouveauCompteForm(forms.Form):
     password = forms.CharField(
-        label="Choisis un mot de passe",
+        label="Mot de passe",
         strip=False,
         widget=forms.PasswordInput(attrs={
             "autocomplete": "new-password",
@@ -39,7 +39,7 @@ class AccepterInvitationNouveauCompteForm(forms.Form):
         }),
     )
     password_confirm = forms.CharField(
-        label="Confirme le mot de passe",
+        label="Confirmer le mot de passe",
         strip=False,
         widget=forms.PasswordInput(attrs={
             "autocomplete": "new-password",
