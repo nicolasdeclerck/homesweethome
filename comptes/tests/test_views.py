@@ -24,7 +24,7 @@ def test_post_valid_credentials_logs_in_and_redirects():
     )
 
     assert response.status_code == 302
-    assert response.url == "/"
+    assert response.url == reverse("foyer:mon-foyer")
     assert client.session.get("_auth_user_id") == str(user.pk)
 
 

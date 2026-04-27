@@ -46,7 +46,7 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "comptes.User"
 LOGIN_URL = "comptes:connexion"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "foyer:mon-foyer"
 LOGOUT_REDIRECT_URL = "comptes:connexion"
 
 MIDDLEWARE = [

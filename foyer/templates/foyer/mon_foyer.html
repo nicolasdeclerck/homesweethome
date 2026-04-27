@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ foyer.nom }} — HomeSweetHome{% endblock %}
+
+{% block content %}
+<div class="centered-page">
+    <header class="page-head">
+        <div>
+            <h1 class="page-title">{{ foyer.nom }}</h1>
+            <p class="muted sm">Créé le {{ foyer.date_creation|date:"j F Y" }}</p>
+        </div>
+        <form method="post" action="{% url 'comptes:deconnexion' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm">Se déconnecter</button>
+        </form>
+    </header>
+
+    <section>
+        <div class="cat-head">Membres du foyer</div>
+        {% for membre in membres %}
+        <div class="card">
+            <div class="card-row">
+                <div class="card-grow">
+                    <div class="card-title">{{ membre.user.email }}</div>
+                    <div class="muted sm">Membre depuis le {{ membre.date_arrivee|date:"j F Y" }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

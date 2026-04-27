@@ -1,15 +1,20 @@
 from django.contrib import admin
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import include, path
-from django.views.generic import TemplateView
+from django.urls import include, path, reverse
+from django.views.generic import RedirectView
 
 
-class HomeView(LoginRequiredMixin, TemplateView):
-    template_name = "home.html"
+class RootRedirectView(RedirectView):
+    permanent = False
+
+    def get_redirect_url(self, *args, **kwargs):
+        if self.request.user.is_authenticated:
+            return reverse("foyer:mon-foyer")
+        return reverse("comptes:connexion")
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", HomeView.as_view(), name="home"),
+    path("", RootRedirectView.as_view(), name="root"),
+    path("foyer/", include("foyer.urls")),
     path("", include("comptes.urls")),
 ]
