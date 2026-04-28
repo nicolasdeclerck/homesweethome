@@ -1,50 +1,67 @@
-<form method="post"
-      action="{% url 'activites:activite-create' %}"
-      hx-post="{% url 'activites:activite-create' %}"
-      hx-target="#activite-form-zone"
-      hx-swap="innerHTML"
-      class="drawer-form"
-      novalidate>
-    {% csrf_token %}
-
-    <div class="field">
-        <label for="{{ form.titre.id_for_label }}" class="field-label">
-            {{ form.titre.label }}
-        </label>
-        {{ form.titre }}
-        {% if form.titre.errors %}
-        <div class="field-hint" style="color: var(--accent);">
-            {{ form.titre.errors|join:" " }}
+<header class="drawer-head">
+    <div class="drawer-head-row">
+        <div>
+            <h2 id="drawer-ajouter-activite-titre" class="drawer-title">{{ drawer_title }}</h2>
+            <p class="drawer-sub">{{ drawer_sub }}</p>
         </div>
-        {% endif %}
-    </div>
-
-    <div class="field">
-        <label for="{{ form.categorie_nom.id_for_label }}" class="field-label">
-            {{ form.categorie_nom.label }}
-        </label>
-        {{ form.categorie_nom }}
-        <datalist id="categories-existantes">
-            {% for nom in categories_existantes %}
-            <option value="{{ nom }}"></option>
-            {% endfor %}
-        </datalist>
-        <div class="field-hint">
-            Choisissez une catégorie existante ou tapez un nouveau nom.
-        </div>
-        {% if form.categorie_nom.errors %}
-        <div class="field-hint" style="color: var(--accent);">
-            {{ form.categorie_nom.errors|join:" " }}
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="btn-row end" style="margin-top: 16px;">
         <button type="button"
-                class="btn btn-ghost"
-                data-drawer-close="ajouter-activite">
-            Annuler
+                class="btn btn-ghost btn-sm drawer-close"
+                data-drawer-close="ajouter-activite"
+                aria-label="Fermer">
+            ×
         </button>
-        <button type="submit" class="btn btn-primary">Ajouter</button>
     </div>
-</form>
+</header>
+
+<div class="drawer-body">
+    <form method="post"
+          action="{{ form_action }}"
+          hx-post="{{ form_action }}"
+          hx-target="#activite-form-zone"
+          hx-swap="innerHTML"
+          class="drawer-form"
+          novalidate>
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="{{ form.titre.id_for_label }}" class="field-label">
+                {{ form.titre.label }}
+            </label>
+            {{ form.titre }}
+            {% if form.titre.errors %}
+            <div class="field-hint" style="color: var(--accent);">
+                {{ form.titre.errors|join:" " }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ form.categorie_nom.id_for_label }}" class="field-label">
+                {{ form.categorie_nom.label }}
+            </label>
+            {{ form.categorie_nom }}
+            <datalist id="categories-existantes">
+                {% for nom in categories_existantes %}
+                <option value="{{ nom }}"></option>
+                {% endfor %}
+            </datalist>
+            <div class="field-hint">
+                Choisissez une catégorie existante ou tapez un nouveau nom.
+            </div>
+            {% if form.categorie_nom.errors %}
+            <div class="field-hint" style="color: var(--accent);">
+                {{ form.categorie_nom.errors|join:" " }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="btn-row end" style="margin-top: 16px;">
+            <button type="button"
+                    class="btn btn-ghost"
+                    data-drawer-close="ajouter-activite">
+                Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+        </div>
+    </form>
+</div>

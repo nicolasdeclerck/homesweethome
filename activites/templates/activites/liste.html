@@ -47,21 +47,7 @@
        aria-modal="true"
        aria-labelledby="drawer-ajouter-activite-titre"
        hidden>
-    <header class="drawer-head">
-        <div class="drawer-head-row">
-            <div>
-                <h2 id="drawer-ajouter-activite-titre" class="drawer-title">Nouvelle activité</h2>
-                <p class="drawer-sub">Ajoutez une tâche récurrente du foyer.</p>
-            </div>
-            <button type="button"
-                    class="btn btn-ghost btn-sm drawer-close"
-                    data-drawer-close="ajouter-activite"
-                    aria-label="Fermer">
-                ×
-            </button>
-        </div>
-    </header>
-    <div class="drawer-body" id="activite-form-zone">
+    <div id="activite-form-zone">
         {% include "activites/_activite_form.html" %}
     </div>
 </aside>
@@ -71,8 +57,8 @@
     const drawerName = "ajouter-activite";
     const drawer = document.getElementById("drawer-" + drawerName);
     const overlay = document.querySelector('[data-drawer-overlay="' + drawerName + '"]');
-    const openBtns = document.querySelectorAll('[data-drawer-open="' + drawerName + '"]');
-    const closeBtns = document.querySelectorAll('[data-drawer-close="' + drawerName + '"]');
+    const formZone = document.getElementById("activite-form-zone");
+    const formResetUrl = "{% url 'activites:activite-create' %}";
 
     if (!drawer || !overlay) return;
 
@@ -87,6 +73,18 @@
         if (firstInput) firstInput.focus();
     }
 
+    function resetFormZone() {
+        // Recharge un fragment "création" frais : évite que la prochaine
+        // ouverture du drawer (via "+ Ajouter") n'affiche les valeurs de
+        // l'édition précédente, et garde le CSRF token à jour.
+        if (window.htmx && formZone) {
+            window.htmx.ajax("GET", formResetUrl, {
+                target: "#activite-form-zone",
+                swap: "innerHTML",
+            });
+        }
+    }
+
     function closeDrawer() {
         drawer.classList.remove("is-open");
         overlay.classList.remove("is-open");
@@ -94,14 +92,20 @@
         setTimeout(function () {
             drawer.hidden = true;
             overlay.hidden = true;
+            resetFormZone();
         }, 200);
     }
 
-    openBtns.forEach(function (btn) {
-        btn.addEventListener("click", openDrawer);
-    });
-    closeBtns.forEach(function (btn) {
-        btn.addEventListener("click", closeDrawer);
+    // Délégation : les boutons "+ Ajouter", crayon (édition) et fermeture
+    // peuvent être re-rendus par HTMX (form ré-injecté). On n'attache donc
+    // pas les listeners à des nœuds figés au chargement initial.
+    document.addEventListener("click", function (e) {
+        if (e.target.closest('[data-drawer-open="' + drawerName + '"]')) {
+            openDrawer();
+        }
+        if (e.target.closest('[data-drawer-close="' + drawerName + '"]')) {
+            closeDrawer();
+        }
     });
     overlay.addEventListener("click", closeDrawer);
 
@@ -109,7 +113,7 @@
         if (e.key === "Escape" && !drawer.hidden) closeDrawer();
     });
 
-    // Fermeture automatique après création réussie d'une activité.
+    // Fermeture automatique après création/édition réussie d'une activité.
     document.body.addEventListener("activites-mises-a-jour", closeDrawer);
 })();
 </script>

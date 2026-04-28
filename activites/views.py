@@ -1,14 +1,19 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseForbidden
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import TemplateView, View
 
 from foyer.models import MembreFoyer
 
 from .forms import ActiviteCreationForm
-from .services import creer_activite, lister_activites_par_categorie
+from .models import Activite
+from .services import (
+    creer_activite,
+    lister_activites_par_categorie,
+    mettre_a_jour_activite,
+)
 
 
 def _foyer_du_user(user):
@@ -60,13 +65,46 @@ def _contexte_liste(foyer, *, user=None):
     }
 
 
+def _contexte_form(foyer, form, *, activite=None):
+    """Contexte rendu par `_activite_form.html`, pour création ou édition.
+
+    Quand `activite` est None on est en création : action vers
+    `activite-create`, libellé « Ajouter ». Sinon on cible la vue de
+    modification de cette activité, avec le libellé « Enregistrer ».
+    """
+    if activite is None:
+        form_action = reverse("activites:activite-create")
+        submit_label = "Ajouter"
+        drawer_title = "Nouvelle activité"
+        drawer_sub = "Ajoutez une tâche récurrente du foyer."
+    else:
+        form_action = reverse(
+            "activites:activite-modifier",
+            kwargs={"activite_id": activite.pk},
+        )
+        submit_label = "Enregistrer"
+        drawer_title = "Modifier l'activité"
+        drawer_sub = "Modifiez le titre ou la catégorie."
+    return {
+        "form": form,
+        "categories_existantes": list(
+            foyer.categories.order_by("nom").values_list("nom", flat=True)
+        ),
+        "form_action": form_action,
+        "submit_label": submit_label,
+        "drawer_title": drawer_title,
+        "drawer_sub": drawer_sub,
+    }
+
+
 class ActivitesListView(_ActivitesFoyerMixin, TemplateView):
     template_name = "activites/liste.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(_contexte_liste(self.request.foyer, user=self.request.user))
-        context["form"] = ActiviteCreationForm()
+        # Le drawer initial est en mode "création".
+        context.update(_contexte_form(self.request.foyer, ActiviteCreationForm()))
         context["active_nav"] = "activites"
         return context
 
@@ -75,6 +113,15 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
     template_form = "activites/_activite_form.html"
 
     def get(self, request):
+        # Sur GET HTMX (ex. réinitialisation du drawer après une édition),
+        # on renvoie un fragment "création" frais. Hors HTMX, on garde le
+        # comportement existant (redirect vers la liste).
+        if request.headers.get("HX-Request") == "true":
+            return render(
+                request,
+                self.template_form,
+                _contexte_form(request.foyer, ActiviteCreationForm()),
+            )
         return redirect("activites:activite-liste")
 
     def post(self, request):
@@ -86,18 +133,11 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
                 return render(
                     request,
                     self.template_form,
-                    {
-                        "form": form,
-                        "categories_existantes": list(
-                            request.foyer.categories.order_by("nom").values_list(
-                                "nom", flat=True
-                            )
-                        ),
-                    },
+                    _contexte_form(request.foyer, form),
                     status=400,
                 )
             context = _contexte_liste(request.foyer, user=request.user)
-            context["form"] = form
+            context.update(_contexte_form(request.foyer, form))
             context["active_nav"] = "activites"
             return render(request, "activites/liste.html", context, status=400)
 
@@ -111,19 +151,79 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
             response = render(
                 request,
                 self.template_form,
-                {
-                    "form": ActiviteCreationForm(),
-                    "categories_existantes": list(
-                        request.foyer.categories.order_by("nom").values_list(
-                            "nom", flat=True
-                        )
-                    ),
-                },
+                _contexte_form(request.foyer, ActiviteCreationForm()),
             )
             response["HX-Trigger"] = "activites-mises-a-jour"
             return response
 
         messages.success(request, "Activité ajoutée.")
+        return redirect(reverse("activites:activite-liste"))
+
+
+class ActiviteUpdateView(_ActivitesFoyerMixin, View):
+    template_form = "activites/_activite_form.html"
+
+    def _activite_du_foyer(self, request, activite_id):
+        # Filtre par foyer : 404 transparente si l'activité n'existe pas
+        # ou appartient à un autre foyer (évite de leaker l'existence).
+        return get_object_or_404(
+            Activite, pk=activite_id, foyer=request.foyer
+        )
+
+    def get(self, request, activite_id):
+        activite = self._activite_du_foyer(request, activite_id)
+        if request.headers.get("HX-Request") != "true":
+            return redirect("activites:activite-liste")
+        form = ActiviteCreationForm(
+            initial={
+                "titre": activite.titre,
+                "categorie_nom": activite.categorie.nom,
+            }
+        )
+        return render(
+            request,
+            self.template_form,
+            _contexte_form(request.foyer, form, activite=activite),
+        )
+
+    def post(self, request, activite_id):
+        activite = self._activite_du_foyer(request, activite_id)
+        form = ActiviteCreationForm(request.POST)
+        is_htmx = request.headers.get("HX-Request") == "true"
+
+        if not form.is_valid():
+            if is_htmx:
+                return render(
+                    request,
+                    self.template_form,
+                    _contexte_form(request.foyer, form, activite=activite),
+                    status=400,
+                )
+            context = _contexte_liste(request.foyer, user=request.user)
+            context.update(
+                _contexte_form(request.foyer, form, activite=activite)
+            )
+            context["active_nav"] = "activites"
+            return render(request, "activites/liste.html", context, status=400)
+
+        mettre_a_jour_activite(
+            activite,
+            titre=form.cleaned_data["titre"],
+            categorie_nom=form.cleaned_data["categorie_nom"],
+        )
+
+        if is_htmx:
+            # Réponse en mode "création" pour réinitialiser le drawer
+            # avant sa fermeture (HX-Trigger).
+            response = render(
+                request,
+                self.template_form,
+                _contexte_form(request.foyer, ActiviteCreationForm()),
+            )
+            response["HX-Trigger"] = "activites-mises-a-jour"
+            return response
+
+        messages.success(request, "Activité modifiée.")
         return redirect(reverse("activites:activite-liste"))
 
 

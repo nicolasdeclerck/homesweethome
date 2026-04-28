@@ -15,17 +15,28 @@
                 <span class="act-cat-count">{{ activites|length }}</span>
             </div>
             {% for activite in activites %}
-            <a class="act-row act-row-link{% if not activite.evaluee_par_user %} act-row-pending{% endif %}"
-               href="{% url 'evaluations:activite-evaluer' activite_id=activite.pk %}">
-                <div class="act-grow">
-                    <div class="act-title">{{ activite.titre }}</div>
-                </div>
-                {% if activite.evaluee_par_user %}
-                <span class="ev-pill ev-done">Évaluée</span>
-                {% else %}
-                <span class="ev-pill ev-wait">À évaluer</span>
-                {% endif %}
-            </a>
+            <div class="act-row{% if not activite.evaluee_par_user %} act-row-pending{% endif %}">
+                <a class="act-row-link"
+                   href="{% url 'evaluations:activite-evaluer' activite_id=activite.pk %}">
+                    <div class="act-grow">
+                        <div class="act-title">{{ activite.titre }}</div>
+                    </div>
+                    {% if activite.evaluee_par_user %}
+                    <span class="ev-pill ev-done">Évaluée</span>
+                    {% else %}
+                    <span class="ev-pill ev-wait">À évaluer</span>
+                    {% endif %}
+                </a>
+                <button type="button"
+                        class="act-row-edit-btn"
+                        hx-get="{% url 'activites:activite-modifier' activite_id=activite.pk %}"
+                        hx-target="#activite-form-zone"
+                        hx-swap="innerHTML"
+                        data-drawer-open="ajouter-activite"
+                        aria-label="Modifier {{ activite.titre }}">
+                    {% include "partials/icons/_pencil.html" %}
+                </button>
+            </div>
             {% endfor %}
             {% endfor %}
         </div>
