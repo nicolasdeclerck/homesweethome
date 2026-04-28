@@ -56,11 +56,7 @@
 
                 {% if erreur %}
                 <div class="banner" role="alert">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9"/>
-                        <path d="M12 8v.01M12 11v5"/>
-                    </svg>
+                    {% include "partials/icons/_alert.html" %}
                     <span>{{ erreur }}</span>
                 </div>
                 {% endif %}
