@@ -15,10 +15,6 @@
 
     <header class="page-head">
         <div>
-            <p class="muted sm">
-                <a href="{% url 'activites:activite-liste' %}" class="muted">← Activités</a>
-                · {{ activite.categorie.nom }}
-            </p>
             <h1 class="page-title">{{ activite.titre }}</h1>
             <p class="muted">
                 Évaluez la charge de cette activité sur une échelle de 1 à 5.
@@ -36,9 +32,11 @@
                 {% endif %}
             </div>
             {% if autre_membre and evaluation_autre %}
-                {% include "evaluations/_charge_dots.html" with libelle="Charge mentale" valeur=evaluation_autre.charge_mentale %}
-                {% include "evaluations/_charge_dots.html" with libelle="Charge physique" valeur=evaluation_autre.charge_physique %}
-                {% include "evaluations/_charge_dots.html" with libelle="Durée" valeur=evaluation_autre.duree %}
+                <div class="charges-grid">
+                    {% include "evaluations/_charge_dots.html" with libelle="Charge mentale" valeur=evaluation_autre.charge_mentale %}
+                    {% include "evaluations/_charge_dots.html" with libelle="Charge physique" valeur=evaluation_autre.charge_physique %}
+                    {% include "evaluations/_charge_dots.html" with libelle="Durée" valeur=evaluation_autre.duree %}
+                </div>
             {% elif autre_membre %}
                 <p class="muted" style="margin-top: 12px;">Pas encore évalué.</p>
             {% else %}

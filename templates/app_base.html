@@ -2,20 +2,39 @@
 
 {% comment %}
 Layout app HomeSweetHome — sidebar fixe à gauche (logo + nom du foyer en haut,
-puis les sections de navigation issues du context processor `nav_items`).
+puis les sections de navigation issues du context processor `nav_items`,
+et un bouton de déconnexion ancré tout en bas).
+En mobile la sidebar est masquée et s'ouvre via le bouton hamburger ; elle
+recouvre alors tout l'écran et se referme via le bouton « X ».
 {% endcomment %}
 
 {% block content %}
 <a href="#main-content" class="skip-link">Aller au contenu principal</a>
 
+<button type="button"
+        class="hamburger"
+        data-sidebar-toggle="open"
+        aria-label="Ouvrir le menu"
+        aria-controls="app-sidebar"
+        aria-expanded="false">
+    {% include "partials/icons/_menu.html" %}
+</button>
+
 <div class="app-shell">
-    <aside class="sidebar" aria-label="Navigation principale">
+    <aside id="app-sidebar" class="sidebar" aria-label="Navigation principale">
+        <button type="button"
+                class="sidebar-close"
+                data-sidebar-toggle="close"
+                aria-label="Fermer le menu">
+            {% include "partials/icons/_close.html" %}
+        </button>
+
         <div class="sb-brand">
             <div class="sb-brand-mark" aria-hidden="true">HSH</div>
             <div class="sb-brand-name">{{ foyer_courant.nom|default:"HomeSweetHome" }}</div>
         </div>
 
-        <nav>
+        <nav class="sb-nav">
             <div class="sb-section" id="sb-section-foyer">Foyer</div>
             <ul class="sb-list" aria-labelledby="sb-section-foyer">
                 {% for item in nav_items %}
@@ -41,10 +60,52 @@ puis les sections de navigation issues du context processor `nav_items`).
                 {% endfor %}
             </ul>
         </nav>
+
+        {% if user.is_authenticated %}
+        <div class="sb-footer">
+            <form method="post" action="{% url 'comptes:deconnexion' %}" class="sb-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="sb-item sb-logout">
+                    {% include "partials/icons/_logout.html" %}
+                    Se déconnecter
+                </button>
+            </form>
+        </div>
+        {% endif %}
     </aside>
 
     <main class="sb-main" id="main-content" tabindex="-1">
         {% block app_content %}{% endblock %}
     </main>
 </div>
+
+<script>
+(function () {
+    const sidebar = document.getElementById("app-sidebar");
+    const openBtn = document.querySelector('[data-sidebar-toggle="open"]');
+    const closeBtns = document.querySelectorAll('[data-sidebar-toggle="close"]');
+    if (!sidebar || !openBtn) return;
+
+    function openSidebar() {
+        sidebar.classList.add("is-open");
+        document.body.classList.add("sidebar-open");
+        openBtn.setAttribute("aria-expanded", "true");
+    }
+    function closeSidebar() {
+        sidebar.classList.remove("is-open");
+        document.body.classList.remove("sidebar-open");
+        openBtn.setAttribute("aria-expanded", "false");
+    }
+
+    openBtn.addEventListener("click", openSidebar);
+    closeBtns.forEach(function (btn) {
+        btn.addEventListener("click", closeSidebar);
+    });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && sidebar.classList.contains("is-open")) {
+            closeSidebar();
+        }
+    });
+})();
+</script>
 {% endblock %}

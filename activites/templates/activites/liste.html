@@ -22,11 +22,13 @@
             </p>
         </div>
         <button type="button"
-                class="btn btn-primary"
+                class="btn btn-primary btn-add"
                 data-drawer-open="ajouter-activite"
                 aria-haspopup="dialog"
-                aria-controls="drawer-ajouter-activite">
-            + Ajouter une activité
+                aria-controls="drawer-ajouter-activite"
+                aria-label="Ajouter une activité">
+            {% include "partials/icons/_plus.html" %}
+            <span class="btn-add-label">Ajouter une activité</span>
         </button>
     </header>
 
