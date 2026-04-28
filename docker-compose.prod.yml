@@ -74,6 +74,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  beat:
+    image: ghcr.io/nicolasdeclerck/homesweethome:latest
+    command: celery -A config beat --loglevel=info
+    env_file:
+      - .env.prod
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     env_file:

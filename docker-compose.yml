@@ -65,6 +65,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  beat:
+    build:
+      context: .
+      args:
+        REQUIREMENTS: requirements/dev.txt
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
