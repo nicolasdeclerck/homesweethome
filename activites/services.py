@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
+from django.db.models import Exists, OuterRef
+
 from foyer.models import Foyer
 
 from .models import Activite, Categorie
@@ -42,14 +44,35 @@ def creer_activite(*, foyer: Foyer, titre: str, categorie_nom: str) -> Activite:
 
 def lister_activites_par_categorie(
     foyer: Foyer,
+    *,
+    user=None,
 ) -> OrderedDict[Categorie, list[Activite]]:
-    """Retourne les activités du foyer, regroupées et triées par catégorie."""
-    activites = (
+    """Retourne les activités du foyer, regroupées et triées par catégorie.
+
+    Si `user` est fourni, chaque `Activite` reçoit un attribut booléen
+    `evaluee_par_user` indiquant si cet utilisateur a déjà évalué
+    l'activité (utilisé pour afficher le label « Évaluée » / « À évaluer »
+    à droite de chaque ligne sans déclencher de N+1).
+    """
+    qs = (
         Activite.objects.filter(foyer=foyer)
         .select_related("categorie")
         .order_by("categorie__nom", "titre")
     )
+    if user is not None:
+        # Import paresseux pour éviter une dépendance circulaire au chargement
+        # (`evaluations.models` importe `activites.models`).
+        from evaluations.models import Evaluation
+
+        qs = qs.annotate(
+            evaluee_par_user=Exists(
+                Evaluation.objects.filter(
+                    user=user,
+                    activite=OuterRef("pk"),
+                )
+            )
+        )
     groupes: OrderedDict[Categorie, list[Activite]] = OrderedDict()
-    for activite in activites:
+    for activite in qs:
         groupes.setdefault(activite.categorie, []).append(activite)
     return groupes

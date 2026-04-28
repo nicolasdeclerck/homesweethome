@@ -1,0 +1,13 @@
+{# Affiche un score de charge 1→5 en dots verticaux (P3 du design system).
+   Args : libelle (str), valeur (int 1-5). #}
+{% with valeur=valeur|default:0 %}
+<div class="charge {% if valeur <= 2 %}charge-low{% elif valeur == 3 %}charge-mid{% else %}charge-high{% endif %}" style="margin-top: 12px;">
+    <span class="charge-label">{{ libelle }}</span>
+    <span class="charge-dots" aria-hidden="true">
+        {% for i in "12345" %}
+        <span class="charge-dot{% if forloop.counter <= valeur %} on{% endif %}"></span>
+        {% endfor %}
+    </span>
+    <span class="charge-num">{{ valeur }}/5</span>
+</div>
+{% endwith %}

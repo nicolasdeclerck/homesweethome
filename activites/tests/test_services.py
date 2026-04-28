@@ -95,3 +95,39 @@ def test_lister_activites_par_categorie_ignore_les_autres_foyers():
     ActiviteFactory(foyer=autre)
 
     assert lister_activites_par_categorie(foyer) == {}
+
+
+def test_lister_activites_annote_evaluee_par_user_si_fourni():
+    # Imports locaux : `evaluations` dépend d'`activites`, donc l'inverse
+    # ne doit pas être un import top-level.
+    from comptes.tests.factories import UserFactory
+    from evaluations.tests.factories import EvaluationFactory
+
+    foyer = FoyerFactory()
+    user = UserFactory()
+    cat = CategorieFactory(foyer=foyer)
+    a_evaluee = ActiviteFactory(foyer=foyer, categorie=cat, titre="A")
+    ActiviteFactory(foyer=foyer, categorie=cat, titre="B")
+    EvaluationFactory(user=user, activite=a_evaluee)
+
+    groupes = lister_activites_par_categorie(foyer, user=user)
+
+    by_titre = {a.titre: a for a in groupes[cat]}
+    assert by_titre["A"].evaluee_par_user is True
+    assert by_titre["B"].evaluee_par_user is False
+
+
+def test_lister_activites_annote_ignore_evaluations_d_autres_users():
+    from comptes.tests.factories import UserFactory
+    from evaluations.tests.factories import EvaluationFactory
+
+    foyer = FoyerFactory()
+    moi = UserFactory()
+    autre = UserFactory()
+    cat = CategorieFactory(foyer=foyer)
+    activite = ActiviteFactory(foyer=foyer, categorie=cat)
+    EvaluationFactory(user=autre, activite=activite)
+
+    groupes = lister_activites_par_categorie(foyer, user=moi)
+
+    assert list(groupes[cat])[0].evaluee_par_user is False
