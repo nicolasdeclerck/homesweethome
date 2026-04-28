@@ -6,7 +6,7 @@ This document covers situations the main `SKILL.md` workflow does not handle dir
 
 If the issue is a typo, a comment fix, or a clearly-scoped one-line change:
 
-- Skip the explicit plan-approval step.
+- Skip even the brief internal planning notes — go straight from issue → branch → fix.
 - Still load the issue, open a branch, open a PR linking the issue.
 - Keep the commit message and PR body short but correct.
 
