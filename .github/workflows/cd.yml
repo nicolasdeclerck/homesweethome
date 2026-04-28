@@ -63,8 +63,9 @@ jobs:
       contents: read
       packages: read
     steps:
+      # Pin par SHA (supply chain) — équivaut à appleboy/ssh-action@v1.2.0.
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         env:
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,26 +79,69 @@ jobs:
             set -euo pipefail
             cd /home/ubuntu/n8n-traefik/repos/homesweethome
 
-            # Login GHCR avec le GITHUB_TOKEN du workflow (fonctionne que
-            # l'image soit publique ou privée).
+            # 1. Capturer le SHA git ET l'image actuelle pour un rollback
+            #    explicite en cas d'échec d'une étape ultérieure.
+            PREVIOUS_SHA="$(git rev-parse HEAD)"
+            CURRENT_IMAGE="ghcr.io/nicolasdeclerck/homesweethome:latest"
+            ROLLBACK_IMAGE="ghcr.io/nicolasdeclerck/homesweethome:rollback"
+            echo "Previous SHA: $PREVIOUS_SHA"
+            docker tag "$CURRENT_IMAGE" "$ROLLBACK_IMAGE" || true
+
+            rollback() {
+              echo "[deploy] Échec détecté — rollback git + image précédente."
+              git reset --hard "$PREVIOUS_SHA" || true
+              docker tag "$ROLLBACK_IMAGE" "$CURRENT_IMAGE" || true
+              docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans || true
+            }
+            trap rollback ERR
+
+            # 2. Login GHCR (fonctionne que l'image soit publique ou privée).
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-            # Synchroniser le code avec main
+            # 3. Synchroniser le code avec main.
             git fetch origin main
             git checkout main
             git reset --hard origin/main
 
-            # Récupérer la nouvelle image depuis GHCR
+            # 4. Pull de la nouvelle image AVANT de toucher aux conteneurs en
+            #    cours pour limiter la fenêtre d'indisponibilité.
             docker compose -f docker-compose.prod.yml pull
 
-            # Recréer les services avec la nouvelle image (pas de --build)
+            # 5. Migrations dans un conteneur one-shot (image neuve, DB en
+            #    place) AVANT de basculer le trafic — évite la fenêtre où le
+            #    nouveau code tournerait contre un schéma non encore migré.
+            docker compose -f docker-compose.prod.yml run --rm web \
+              python manage.py migrate --noinput
+
+            # 6. Recréer les services avec la nouvelle image (DB déjà migrée).
             docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
-            # Migrations + statiques + restart pour recharger le manifest
-            docker compose -f docker-compose.prod.yml exec -T web python manage.py migrate --noinput
-            docker compose -f docker-compose.prod.yml exec -T web python manage.py collectstatic --noinput
+            # 7. Collectstatic dans le nouveau conteneur web (alimente le
+            #    volume `static_files` partagé).
+            docker compose -f docker-compose.prod.yml exec -T web \
+              python manage.py collectstatic --noinput
+
+            # 8. Restart web pour recharger le manifest WhiteNoise.
             docker compose -f docker-compose.prod.yml restart web
 
-            # Cleanup
+            # 9. Healthcheck post-deploy : on attend que /health/ réponde 200
+            #    via Traefik. Échec après 30s → trap déclenche le rollback.
+            HEALTH_URL="https://homesweethome.nickorp.com/health/"
+            for i in $(seq 1 15); do
+              if curl -fsS -o /dev/null -w "%{http_code}" --max-time 5 "$HEALTH_URL" | grep -q "^200$"; then
+                echo "[deploy] Healthcheck OK (tentative $i)"
+                break
+              fi
+              if [ "$i" = "15" ]; then
+                echo "[deploy] Healthcheck KO après 15 tentatives" >&2
+                exit 1
+              fi
+              sleep 2
+            done
+
+            # Plus rien ne doit échouer — on désactive le trap.
+            trap - ERR
+
+            # 10. Cleanup.
             docker logout ghcr.io
             docker image prune -f
