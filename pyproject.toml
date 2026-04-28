@@ -34,9 +34,11 @@ ignore = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
+# Pas de `--reuse-db` par défaut : il peut masquer un problème de migration
+# (la CI repart toujours d'une DB vierge, on s'aligne en local). Pour gagner
+# du temps en boucle locale, ajouter à la main `--reuse-db` quand pertinent.
 addopts = [
     "--strict-markers",
-    "--reuse-db",
     "--ds=config.settings.test",
 ]
 

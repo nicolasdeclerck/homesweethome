@@ -17,7 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY requirements/ ./requirements/
-ARG REQUIREMENTS=requirements/dev.txt
+# Défaut **prod** : si on oublie le `--build-arg`, l'image embarque uniquement
+# les dépendances runtime. Le compose dev override avec `requirements/dev.txt`.
+ARG REQUIREMENTS=requirements/prod.txt
 RUN pip install --prefix=/install -r ${REQUIREMENTS}
 
 
