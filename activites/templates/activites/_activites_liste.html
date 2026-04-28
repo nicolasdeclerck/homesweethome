@@ -8,25 +8,28 @@
      hx-trigger="activites-mises-a-jour from:body"
      hx-swap="outerHTML">
     {% if activites_par_categorie %}
-        {% for categorie, activites in activites_par_categorie.items %}
-        <div class="cat-head">{{ categorie.nom }}</div>
-        {% for activite in activites %}
-        <div class="card">
-            <div class="card-row">
-                <div class="card-grow">
-                    <div class="card-title">{{ activite.titre }}</div>
+        <div class="act-list">
+            {% for categorie, activites in activites_par_categorie.items %}
+            <div class="act-cat-head">
+                <span class="act-cat-name">{{ categorie.nom }}</span>
+                <span class="act-cat-count">{{ activites|length }}</span>
+            </div>
+            {% for activite in activites %}
+            <div class="act-row">
+                <div class="act-grow">
+                    <div class="act-title">{{ activite.titre }}</div>
                 </div>
             </div>
+            {% endfor %}
+            {% endfor %}
         </div>
-        {% endfor %}
-        {% endfor %}
     {% else %}
         <div class="empty">
             <div class="empty-illu" aria-hidden="true"></div>
             <div class="empty-title">Aucune activité pour le moment</div>
             <div class="empty-sub">
                 Ajoutez la première tâche commune à votre foyer
-                à l'aide du formulaire ci-dessus.
+                via le bouton « + Ajouter une activité ».
             </div>
         </div>
     {% endif %}

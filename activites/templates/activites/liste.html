@@ -21,17 +21,94 @@
                 <span id="activites-compteur">{{ nb_activites }} activité{{ nb_activites|pluralize }}</span>
             </p>
         </div>
+        <button type="button"
+                class="btn btn-primary"
+                data-drawer-open="ajouter-activite"
+                aria-haspopup="dialog"
+                aria-controls="drawer-ajouter-activite">
+            + Ajouter une activité
+        </button>
     </header>
 
-    <section style="margin-top: 8px;">
-        <div class="cat-head">Ajouter une activité</div>
-        <div id="activite-form-zone">
-            {% include "activites/_activite_form.html" %}
-        </div>
-    </section>
-
-    <section style="margin-top: 24px;">
+    <section style="margin-top: 16px;">
         {% include "activites/_activites_liste.html" %}
     </section>
 </div>
+
+<div class="drawer-overlay"
+     data-drawer-overlay="ajouter-activite"
+     hidden></div>
+
+<aside id="drawer-ajouter-activite"
+       class="drawer"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="drawer-ajouter-activite-titre"
+       hidden>
+    <header class="drawer-head">
+        <div class="drawer-head-row">
+            <div>
+                <h2 id="drawer-ajouter-activite-titre" class="drawer-title">Nouvelle activité</h2>
+                <p class="drawer-sub">Ajoutez une tâche récurrente du foyer.</p>
+            </div>
+            <button type="button"
+                    class="btn btn-ghost btn-sm drawer-close"
+                    data-drawer-close="ajouter-activite"
+                    aria-label="Fermer">
+                ×
+            </button>
+        </div>
+    </header>
+    <div class="drawer-body" id="activite-form-zone">
+        {% include "activites/_activite_form.html" %}
+    </div>
+</aside>
+
+<script>
+(function () {
+    const drawerName = "ajouter-activite";
+    const drawer = document.getElementById("drawer-" + drawerName);
+    const overlay = document.querySelector('[data-drawer-overlay="' + drawerName + '"]');
+    const openBtns = document.querySelectorAll('[data-drawer-open="' + drawerName + '"]');
+    const closeBtns = document.querySelectorAll('[data-drawer-close="' + drawerName + '"]');
+
+    if (!drawer || !overlay) return;
+
+    function openDrawer() {
+        drawer.hidden = false;
+        overlay.hidden = false;
+        // Force reflow pour que la transition CSS s'applique.
+        void drawer.offsetWidth;
+        drawer.classList.add("is-open");
+        overlay.classList.add("is-open");
+        const firstInput = drawer.querySelector("input, textarea, select");
+        if (firstInput) firstInput.focus();
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("is-open");
+        overlay.classList.remove("is-open");
+        // Attend la fin de la transition avant de masquer pour l'a11y.
+        setTimeout(function () {
+            drawer.hidden = true;
+            overlay.hidden = true;
+        }, 200);
+    }
+
+    openBtns.forEach(function (btn) {
+        btn.addEventListener("click", openDrawer);
+    });
+    closeBtns.forEach(function (btn) {
+        btn.addEventListener("click", closeDrawer);
+    });
+    overlay.addEventListener("click", closeDrawer);
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !drawer.hidden) closeDrawer();
+    });
+
+    // Fermeture automatique après création réussie d'une activité.
+    document.body.addEventListener("activites-mises-a-jour", closeDrawer);
+})();
+</script>
 {% endblock %}
