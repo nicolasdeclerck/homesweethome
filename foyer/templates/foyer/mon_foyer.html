@@ -81,11 +81,11 @@
         </section>
 
         {% if membres|length >= 2 %}
-        <div class="next-step">
+        <a class="next-step" href="{% url 'activites:activite-liste' %}" style="display: block; text-decoration: none; color: inherit;">
             <div class="muted sm">Prochaine étape</div>
             <div class="card-title">Lister ensemble vos activités</div>
-            <p class="muted sm">Bientôt disponible — vous pourrez recenser les tâches du foyer.</p>
-        </div>
+            <p class="muted sm">Recensez les tâches communes à votre foyer.</p>
+        </a>
         {% endif %}
     {% endif %}
 </div>

@@ -1,0 +1,55 @@
+<div class="card" id="activite-form-card">
+    <form method="post"
+          action="{% url 'activites:activite-create' %}"
+          hx-post="{% url 'activites:activite-create' %}"
+          hx-target="#activite-form-zone"
+          hx-swap="innerHTML"
+          novalidate>
+        {% csrf_token %}
+
+        {% if succes %}
+        <div class="success-banner" role="status" style="margin-bottom: 12px;">
+            {% include "partials/icons/_check.html" %}
+            <span>Activité ajoutée.</span>
+        </div>
+        {% endif %}
+
+        <div class="grid-2">
+            <div class="field">
+                <label for="{{ form.titre.id_for_label }}" class="field-label">
+                    {{ form.titre.label }}
+                </label>
+                {{ form.titre }}
+                {% if form.titre.errors %}
+                <div class="field-hint" style="color: var(--accent);">
+                    {{ form.titre.errors|join:" " }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.categorie_nom.id_for_label }}" class="field-label">
+                    {{ form.categorie_nom.label }}
+                </label>
+                {{ form.categorie_nom }}
+                <datalist id="categories-existantes">
+                    {% for nom in categories_existantes %}
+                    <option value="{{ nom }}"></option>
+                    {% endfor %}
+                </datalist>
+                <div class="field-hint">
+                    Choisissez une catégorie existante ou tapez un nouveau nom.
+                </div>
+                {% if form.categorie_nom.errors %}
+                <div class="field-hint" style="color: var(--accent);">
+                    {{ form.categorie_nom.errors|join:" " }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="btn-row end" style="margin-top: 12px;">
+            <button type="submit" class="btn btn-primary">Ajouter</button>
+        </div>
+    </form>
+</div>
