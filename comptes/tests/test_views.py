@@ -1,4 +1,5 @@
-from django.test import Client
+from django.core.cache import cache
+from django.test import Client, override_settings
 from django.urls import reverse
 
 from comptes.tests.factories import UserFactory
@@ -53,6 +54,27 @@ def test_post_unknown_email_shows_same_generic_error():
     assert response.status_code == 200
     assert b"Identifiants invalides" in response.content
     assert client.session.get("_auth_user_id") is None
+
+
+@override_settings(RATELIMIT_ENABLE=True)
+def test_post_connexion_rate_limited_apres_5_tentatives_par_minute():
+    cache.clear()
+    UserFactory(email="alice@example.com")
+    client = Client()
+
+    for _ in range(5):
+        response = client.post(
+            reverse("comptes:connexion"),
+            data={"username": "alice@example.com", "password": "mauvais"},
+        )
+        assert response.status_code == 200  # form invalid, pas encore bloqué
+
+    response = client.post(
+        reverse("comptes:connexion"),
+        data={"username": "alice@example.com", "password": "mauvais"},
+    )
+    assert response.status_code == 429
+    cache.clear()
 
 
 def test_post_deconnexion_logs_out_and_redirects():
