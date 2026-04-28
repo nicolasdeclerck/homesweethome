@@ -126,4 +126,7 @@ class ActivitesListeFragmentView(_ActivitesFoyerMixin, View):
     template_liste = "activites/_activites_liste.html"
 
     def get(self, request):
-        return render(request, self.template_liste, _contexte_liste(request.foyer))
+        contexte = _contexte_liste(request.foyer)
+        # Active le span OOB qui rafraîchit le compteur du sous-titre.
+        contexte["oob_compteur"] = True
+        return render(request, self.template_liste, contexte)

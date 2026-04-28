@@ -208,3 +208,29 @@ def test_liste_fragment_anonymous_redirects_to_login():
 
     assert response.status_code == 302
     assert reverse("comptes:connexion") in response.url
+
+
+def test_liste_fragment_contient_le_span_oob_compteur():
+    membre = MembreFoyerFactory()
+    ActiviteFactory(foyer=membre.foyer)
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(reverse("activites:activite-liste-fragment"))
+
+    content = response.content.decode("utf-8")
+    assert 'id="activites-compteur"' in content
+    assert 'hx-swap-oob="true"' in content
+    assert "1 activité" in content
+
+
+def test_liste_full_page_n_active_pas_l_oob_compteur():
+    """Le span OOB ne doit s'activer que sur la réponse fragment."""
+    user = UserFactory()
+    client = Client()
+    client.force_login(user)
+
+    response = client.get(reverse("activites:activite-liste"))
+
+    content = response.content.decode("utf-8")
+    assert "hx-swap-oob" not in content
