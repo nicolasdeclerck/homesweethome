@@ -719,6 +719,11 @@ body { min-height: 100vh; }
   background: var(--bg);
   color: var(--ink);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  text-align: center;
 }
 .rate-btn:hover { background: var(--paper); }
 .rate-btn.selected {
