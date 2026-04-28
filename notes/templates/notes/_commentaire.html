@@ -1,0 +1,24 @@
+{# Fragment : un commentaire ancré, affiché en marge d'une note. #}
+{% load notes_extras %}
+<div class="comment-anchored"
+     id="commentaire-{{ commentaire.pk }}"
+     data-commentaire-id="{{ commentaire.pk }}"
+     data-snippet="{{ commentaire.extrait }}">
+    <header class="comment-head">
+        <span class="comment-author">{{ commentaire.auteur|nom_membre }}</span>
+        <span class="muted sm">·</span>
+        <span class="muted sm">{{ commentaire.date_creation|timesince }}</span>
+        {% if commentaire.auteur_id == request.user.pk %}
+        <button type="button"
+                class="btn btn-ghost btn-sm comment-delete"
+                hx-post="{% url 'notes:commentaire-delete' commentaire_id=commentaire.pk %}"
+                hx-target="#commentaire-{{ commentaire.pk }}"
+                hx-swap="outerHTML"
+                hx-confirm="Supprimer ce commentaire ?"
+                aria-label="Supprimer ce commentaire">
+            {% include "partials/icons/_trash.html" %}
+        </button>
+        {% endif %}
+    </header>
+    <p class="comment-body">{{ commentaire.contenu }}</p>
+</div>

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "activites",
     "evaluations",
     "planification",
+    "notes",
 ]
 
 AUTH_USER_MODEL = "comptes.User"
@@ -76,6 +77,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "foyer.context_processors.foyer_courant",
                 "foyer.context_processors.nav_items",
+                "notes.context_processors.notes_badge",
             ],
         },
     },

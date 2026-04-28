@@ -1,0 +1,33 @@
+{# Fragment : ma note en mode édition (textarea + boutons). HTMX swap. #}
+<article class="note-card mienne edition">
+    <header class="note-card-head">
+        <div>
+            <h3 class="note-author">Vous</h3>
+            <p class="muted sm">Édition de votre note</p>
+        </div>
+    </header>
+
+    <form hx-post="{% url 'notes:ma-note' %}"
+          hx-target="#ma-note-zone"
+          hx-swap="innerHTML"
+          class="note-form">
+        {% csrf_token %}
+        <div class="field">
+            {{ note_form.contenu }}
+            {% if note_form.contenu.errors %}
+                <p class="field-hint" style="color: var(--accent);">{{ note_form.contenu.errors|join:" " }}</p>
+            {% endif %}
+        </div>
+        <div class="btn-row end">
+            <button type="button"
+                    class="btn btn-ghost btn-sm"
+                    hx-get="{% url 'notes:liste' %}"
+                    hx-select="#ma-note-zone > *"
+                    hx-target="#ma-note-zone"
+                    hx-swap="innerHTML">
+                Annuler
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        </div>
+    </form>
+</article>

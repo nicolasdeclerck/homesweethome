@@ -1,0 +1,19 @@
+{# Fragment : ré-affiche le mini-formulaire de commentaire avec ses erreurs.
+   Utilisé en réponse à un POST invalide sur `commentaire-create`. #}
+<form class="comment-form-floating comment-anchored is-error"
+      hx-post="{% url 'notes:commentaire-create' note_id=note.pk %}"
+      hx-target="this"
+      hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="extrait" value="{{ form.extrait.value|default_if_none:'' }}">
+    <textarea name="contenu" rows="3" required placeholder="Votre commentaire…" class="field-input">{{ form.contenu.value|default_if_none:'' }}</textarea>
+    {% if form.errors %}
+    <p class="field-hint" style="color: var(--accent);">
+        {% for errors in form.errors.values %}{{ errors|join:" " }} {% endfor %}
+    </p>
+    {% endif %}
+    <div class="btn-row end">
+        <button type="button" class="btn btn-ghost btn-sm" data-cancel>Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm">Publier</button>
+    </div>
+</form>

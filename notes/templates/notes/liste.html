@@ -1,0 +1,239 @@
+{% extends "app_base.html" %}
+
+{% block title %}Notes — HomeSweetHome{% endblock %}
+
+{% block app_content %}
+<div class="content-medium">
+    <header class="page-head">
+        <div>
+            <h1 class="page-title">Notes</h1>
+            <p class="muted">
+                {{ foyer_courant.nom }} ·
+                Espace personnel commentable par les autres membres
+            </p>
+        </div>
+    </header>
+
+    <section class="notes-section">
+        <h2 class="notes-section-title">Ma note</h2>
+        <div id="ma-note-zone">
+            {% include "notes/_ma_note.html" %}
+        </div>
+    </section>
+
+    <section class="notes-section">
+        <h2 class="notes-section-title">Notes des autres membres</h2>
+        {% if notes_autres %}
+            {% for entry in notes_autres %}
+                {% include "notes/_note_autre.html" with entry=entry %}
+            {% endfor %}
+        {% else %}
+            <p class="muted">Aucun autre membre dans le foyer pour le moment.</p>
+        {% endif %}
+    </section>
+</div>
+
+<script>
+(function () {
+    // Repositionne les commentaires en marge à hauteur de leur ancre dans la note.
+    // Appelé au chargement initial et après chaque swap HTMX.
+    function repositionnerCommentaires(noteContent) {
+        const margin = noteContent.parentElement.querySelector(".note-margin");
+        if (!margin) return;
+        const noteRect = noteContent.getBoundingClientRect();
+        const noteText = noteContent.textContent;
+
+        margin.querySelectorAll(".comment-anchored").forEach(function (comment) {
+            const snippet = comment.dataset.snippet || "";
+            const idx = snippet ? noteText.indexOf(snippet) : -1;
+            if (idx === -1) {
+                comment.classList.add("is-misplaced");
+                return;
+            }
+            const range = creerRange(noteContent, idx, idx + snippet.length);
+            if (!range) return;
+            const rect = range.getBoundingClientRect();
+            const top = Math.max(0, rect.top - noteRect.top);
+            comment.style.top = top + "px";
+            comment.classList.add("is-positioned");
+        });
+    }
+
+    // Crée un Range DOM pour la sous-chaîne [start, end) dans `container`,
+    // en parcourant les nœuds texte (compatible avec les éventuels <br>
+    // que linebreaksbr pourrait insérer — non utilisé ici, mais robuste).
+    function creerRange(container, startOffset, endOffset) {
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+        let node;
+        let charsSeen = 0;
+        let startNode = null, startNodeOffset = 0;
+        let endNode = null, endNodeOffset = 0;
+
+        while ((node = walker.nextNode())) {
+            const len = node.nodeValue.length;
+            if (startNode === null && charsSeen + len >= startOffset) {
+                startNode = node;
+                startNodeOffset = startOffset - charsSeen;
+            }
+            if (charsSeen + len >= endOffset) {
+                endNode = node;
+                endNodeOffset = endOffset - charsSeen;
+                break;
+            }
+            charsSeen += len;
+        }
+        if (!startNode || !endNode) return null;
+        const range = document.createRange();
+        try {
+            range.setStart(startNode, startNodeOffset);
+            range.setEnd(endNode, endNodeOffset);
+        } catch (_e) {
+            return null;
+        }
+        return range;
+    }
+
+    function repositionnerToutes() {
+        document.querySelectorAll(".note-content[data-commentable]").forEach(repositionnerCommentaires);
+    }
+
+    // ── Sélection + bouton flottant pour ouvrir un mini-formulaire ──────────
+    let bulle = null;
+    let formulaireActif = null;
+
+    function masquerBulle() {
+        if (bulle) {
+            bulle.remove();
+            bulle = null;
+        }
+    }
+
+    function fermerFormulaire() {
+        if (formulaireActif) {
+            formulaireActif.remove();
+            formulaireActif = null;
+        }
+    }
+
+    function getSelectionDansNote() {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) return null;
+        const range = sel.getRangeAt(0);
+        const noteContent = range.commonAncestorContainer.nodeType === 1
+            ? range.commonAncestorContainer.closest(".note-content[data-commentable]")
+            : range.commonAncestorContainer.parentElement.closest(".note-content[data-commentable]");
+        if (!noteContent) return null;
+        const text = sel.toString();
+        if (!text.trim()) return null;
+        return { range: range, text: text, noteContent: noteContent };
+    }
+
+    document.addEventListener("mouseup", function (e) {
+        // Ne pas réagir aux clics dans la bulle ou le formulaire eux-mêmes
+        if (e.target.closest(".comment-bubble") || e.target.closest(".comment-form-floating")) {
+            return;
+        }
+        // Petit délai pour laisser le navigateur stabiliser la sélection
+        setTimeout(function () {
+            const sel = getSelectionDansNote();
+            masquerBulle();
+            if (!sel) return;
+            afficherBulle(sel);
+        }, 0);
+    });
+
+    function afficherBulle(selection) {
+        const rect = selection.range.getBoundingClientRect();
+        bulle = document.createElement("button");
+        bulle.type = "button";
+        bulle.className = "comment-bubble";
+        bulle.textContent = "Commenter ce passage";
+        bulle.style.position = "absolute";
+        bulle.style.top = (window.scrollY + rect.top - 36) + "px";
+        bulle.style.left = (window.scrollX + rect.left) + "px";
+        bulle.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            ouvrirFormulaire(selection);
+        });
+        document.body.appendChild(bulle);
+    }
+
+    function ouvrirFormulaire(selection) {
+        masquerBulle();
+        fermerFormulaire();
+        const noteId = selection.noteContent.dataset.noteId;
+        const margin = selection.noteContent.parentElement.querySelector(".note-margin");
+        if (!margin) return;
+        const tpl = document.getElementById("comment-form-template");
+        if (!tpl) return;
+        formulaireActif = tpl.content.firstElementChild.cloneNode(true);
+        const urlTpl = formulaireActif.dataset.urlTemplate;
+        formulaireActif.setAttribute(
+            "hx-post",
+            urlTpl.replace("/0/commentaires/", "/" + noteId + "/commentaires/")
+        );
+        formulaireActif.querySelector('input[name="extrait"]').value = selection.text;
+        formulaireActif.querySelector('[data-cancel]').addEventListener("click", function () {
+            fermerFormulaire();
+        });
+        formulaireActif.addEventListener("htmx:afterRequest", function (e) {
+            if (e.detail.successful) {
+                fermerFormulaire();
+                window.getSelection().removeAllRanges();
+            }
+        });
+        // Position approximative : à hauteur du début de la sélection
+        const noteRect = selection.noteContent.getBoundingClientRect();
+        const selRect = selection.range.getBoundingClientRect();
+        formulaireActif.style.top = Math.max(0, selRect.top - noteRect.top) + "px";
+        margin.appendChild(formulaireActif);
+        if (window.htmx) window.htmx.process(formulaireActif);
+        const ta = formulaireActif.querySelector("textarea");
+        if (ta) ta.focus();
+    }
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+            masquerBulle();
+            fermerFormulaire();
+        }
+    });
+
+    document.addEventListener("click", function (e) {
+        if (
+            !e.target.closest(".comment-bubble")
+            && !e.target.closest(".comment-form-floating")
+            && !e.target.closest(".note-content[data-commentable]")
+        ) {
+            masquerBulle();
+        }
+    });
+
+    document.body.addEventListener("commentaires-mis-a-jour", function () {
+        repositionnerToutes();
+    });
+
+    document.body.addEventListener("htmx:afterSwap", repositionnerToutes);
+    window.addEventListener("resize", repositionnerToutes);
+
+    // Premier passage au chargement
+    repositionnerToutes();
+})();
+</script>
+
+<template id="comment-form-template">
+    <form class="comment-form-floating comment-anchored"
+          data-url-template="{% url 'notes:commentaire-create' note_id=0 %}"
+          hx-target="this"
+          hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="extrait" value="">
+        <textarea name="contenu" rows="3" required placeholder="Votre commentaire…" class="field-input"></textarea>
+        <div class="btn-row end">
+            <button type="button" class="btn btn-ghost btn-sm" data-cancel>Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">Publier</button>
+        </div>
+    </form>
+</template>
+{% endblock %}

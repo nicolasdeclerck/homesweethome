@@ -1,0 +1,31 @@
+{# Fragment : section des commentaires orphelins (passage commenté disparu). #}
+{% load notes_extras %}
+<section class="orphelins">
+    <h4 class="orphelins-title">
+        Commentaires sur des passages disparus ({{ orphelins|length }})
+    </h4>
+    <ul class="orphelins-list">
+        {% for commentaire in orphelins %}
+        <li class="orphelin-item" id="commentaire-{{ commentaire.pk }}">
+            <p class="orphelin-extrait">« {{ commentaire.extrait }} »</p>
+            <p class="muted sm">
+                {{ commentaire.auteur|nom_membre }} · {{ commentaire.date_creation|timesince }}
+            </p>
+            <p class="orphelin-contenu">{{ commentaire.contenu }}</p>
+            {% if commentaire.auteur_id == request.user.pk %}
+            <div class="btn-row end">
+                <button type="button"
+                        class="btn btn-ghost btn-sm"
+                        hx-post="{% url 'notes:commentaire-delete' commentaire_id=commentaire.pk %}"
+                        hx-target="#commentaire-{{ commentaire.pk }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Supprimer ce commentaire ?">
+                    {% include "partials/icons/_trash.html" %}
+                    Supprimer
+                </button>
+            </div>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</section>
