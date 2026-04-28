@@ -2,32 +2,48 @@
 
 {% comment %}
 Layout app HomeSweetHome — sidebar fixe à gauche (logo + nom du foyer en haut,
-puis les sections de navigation). Pour le moment, seul l'item « Membres »
-est affiché ; les autres parcours seront ajoutés au fur et à mesure.
+puis les sections de navigation issues du context processor `nav_items`).
 {% endcomment %}
 
 {% block content %}
+<a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
 <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar" aria-label="Navigation principale">
         <div class="sb-brand">
-            <div class="sb-brand-mark">HSH</div>
+            <div class="sb-brand-mark" aria-hidden="true">HSH</div>
             <div class="sb-brand-name">{{ foyer_courant.nom|default:"HomeSweetHome" }}</div>
         </div>
 
-        <div class="sb-section">Foyer</div>
-        <a class="sb-item {% if active_nav == 'membres' %}active{% endif %}"
-           href="{% url 'foyer:mon-foyer' %}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="9" cy="8" r="3.5"/>
-                <path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6"/>
-                <path d="M16 4a3.5 3.5 0 0 1 0 7M22 20c0-3-2-5-5-5.5"/>
-            </svg>
-            Membres
-        </a>
+        <nav>
+            <div class="sb-section" id="sb-section-foyer">Foyer</div>
+            <ul class="sb-list" aria-labelledby="sb-section-foyer">
+                {% for item in nav_items %}
+                <li>
+                    {% if item.bientot %}
+                    <span class="sb-item sb-item-disabled"
+                          aria-disabled="true"
+                          tabindex="-1"
+                          title="Bientôt disponible">
+                        {% include "partials/icons/_"|add:item.icon|add:".html" %}
+                        {{ item.label }}
+                        <span class="tag">Bientôt</span>
+                    </span>
+                    {% else %}
+                    <a class="sb-item {% if active_nav == item.key %}active{% endif %}"
+                       href="{{ item.url }}"
+                       {% if active_nav == item.key %}aria-current="page"{% endif %}>
+                        {% include "partials/icons/_"|add:item.icon|add:".html" %}
+                        {{ item.label }}
+                    </a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
     </aside>
 
-    <main class="sb-main">
+    <main class="sb-main" id="main-content" tabindex="-1">
         {% block app_content %}{% endblock %}
     </main>
 </div>

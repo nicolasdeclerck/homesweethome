@@ -195,7 +195,38 @@ body { min-height: 100vh; }
   cursor: default;
 }
 .sb-item:hover { background: rgba(0,0,0,0.03); }
+.sb-item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
 .sb-item.active { background: rgba(0,0,0,0.05); font-weight: 500; }
+.sb-item-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+.sb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sb-list li { margin: 0; }
+
+/* Lien d'évitement (skip-link) — invisible jusqu'au focus clavier. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 4px;
+  z-index: 1000;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 8px;
+}
 
 .sb-main {
   padding: 32px 48px;
@@ -489,6 +520,11 @@ body { min-height: 100vh; }
 .choice.selected {
   border-color: var(--ink);
   background: var(--paper);
+}
+.choice-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 .choice-icon {
   width: 32px;

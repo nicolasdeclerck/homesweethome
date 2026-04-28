@@ -1,7 +1,25 @@
 """Contexts globaux du domaine ``foyer``."""
 from __future__ import annotations
 
+from django.urls import reverse
+
 from .models import MembreFoyer
+
+# Items de navigation de la sidebar app. Chaque item est un dict :
+#   - key      : identifiant interne (utilisé par `active_nav` côté vue) ;
+#   - label    : libellé affiché ;
+#   - icon     : nom du partial dans templates/partials/icons/_<icon>.html ;
+#   - url_name : nom d'URL Django à résoudre via `reverse` ;
+#   - bientot  : True si la rubrique est en "Bientôt" (rendu désactivé).
+_NAV_ITEMS = (
+    {
+        "key": "membres",
+        "label": "Membres",
+        "icon": "users",
+        "url_name": "foyer:mon-foyer",
+        "bientot": False,
+    },
+)
 
 
 def foyer_courant(request):
@@ -20,3 +38,20 @@ def foyer_courant(request):
         .first()
     )
     return {"foyer_courant": membre.foyer if membre else None}
+
+
+def nav_items(request):
+    """Expose les items de navigation de la sidebar app.
+
+    Permet d'ajouter de nouvelles rubriques (Activités, Évaluations, Planning…)
+    sans toucher aux templates : il suffit d'étendre `_NAV_ITEMS`.
+    """
+    items = []
+    for item in _NAV_ITEMS:
+        items.append(
+            {
+                **item,
+                "url": reverse(item["url_name"]),
+            }
+        )
+    return {"nav_items": items}

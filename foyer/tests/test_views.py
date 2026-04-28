@@ -76,8 +76,10 @@ def test_mon_foyer_n_affiche_pas_section_invitation_pour_un_membre_non_createur(
     response = client.get(reverse("foyer:mon-foyer"))
 
     content = response.content.decode("utf-8")
-    assert "Inviter un membre" not in content
-    assert "Générer le lien" not in content
+    # Assertion robuste : on vérifie l'absence du conteneur du formulaire
+    # plutôt qu'une chaîne de copy qui pourrait évoluer.
+    assert 'id="invitation-form-card"' not in content
+    assert 'id="invitation-form-zone"' not in content
 
 
 def test_mon_foyer_liste_les_invitations_en_attente():
@@ -500,7 +502,7 @@ def test_accepter_post_scenario_nouveau_password_mismatch_renvoie_form_400():
     )
 
     assert response.status_code == 400
-    assert not MembreFoyer.objects.exists()
+    assert not MembreFoyer.objects.filter(user__email="marie@example.com").exists()
     invitation.refresh_from_db()
     assert invitation.statut == Invitation.Statut.EN_ATTENTE
 

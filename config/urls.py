@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import include, path, reverse
 from django.views.generic import RedirectView
 
+from .health import health
+
 
 class RootRedirectView(RedirectView):
     permanent = False
@@ -14,6 +16,7 @@ class RootRedirectView(RedirectView):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("health/", health, name="health"),
     path("", RootRedirectView.as_view(), name="root"),
     path("foyer/", include("foyer.urls")),
     path("", include("comptes.urls")),
