@@ -1,0 +1,111 @@
+{% extends "app_base.html" %}
+
+{% block title %}Planification — HomeSweetHome{% endblock %}
+
+{% block app_content %}
+<div class="content-medium">
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+        <div class="success-banner" role="status">
+            {% include "partials/icons/_check.html" %}
+            <span>{{ message }}</span>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    <header class="page-head">
+        <div>
+            <h1 class="page-title">Planification</h1>
+            <p class="muted">
+                {{ foyer.nom }} ·
+                <span id="periodes-compteur">{{ nb_periodes }} période{{ nb_periodes|pluralize }}</span>
+            </p>
+        </div>
+        <button type="button"
+                class="btn btn-primary btn-add"
+                data-drawer-open="ajouter-periode"
+                aria-haspopup="dialog"
+                aria-controls="drawer-ajouter-periode"
+                aria-label="Ajouter une période">
+            {% include "partials/icons/_plus.html" %}
+            <span class="btn-add-label">Ajouter une période</span>
+        </button>
+    </header>
+
+    <section style="margin-top: 16px;">
+        {% include "planification/_periodes_liste.html" %}
+    </section>
+</div>
+
+<div class="drawer-overlay"
+     data-drawer-overlay="ajouter-periode"
+     hidden></div>
+
+<aside id="drawer-ajouter-periode"
+       class="drawer"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="drawer-ajouter-periode-titre"
+       hidden>
+    <div id="periode-form-zone">
+        {% include "planification/_periode_form.html" %}
+    </div>
+</aside>
+
+<script>
+(function () {
+    const drawerName = "ajouter-periode";
+    const drawer = document.getElementById("drawer-" + drawerName);
+    const overlay = document.querySelector('[data-drawer-overlay="' + drawerName + '"]');
+    const formZone = document.getElementById("periode-form-zone");
+    const formResetUrl = "{% url 'planification:periode-create' %}";
+
+    if (!drawer || !overlay) return;
+
+    function openDrawer() {
+        drawer.hidden = false;
+        overlay.hidden = false;
+        void drawer.offsetWidth;
+        drawer.classList.add("is-open");
+        overlay.classList.add("is-open");
+        const firstInput = drawer.querySelector("input, textarea, select");
+        if (firstInput) firstInput.focus();
+    }
+
+    function resetFormZone() {
+        if (window.htmx && formZone) {
+            window.htmx.ajax("GET", formResetUrl, {
+                target: "#periode-form-zone",
+                swap: "innerHTML",
+            });
+        }
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("is-open");
+        overlay.classList.remove("is-open");
+        setTimeout(function () {
+            drawer.hidden = true;
+            overlay.hidden = true;
+            resetFormZone();
+        }, 200);
+    }
+
+    document.addEventListener("click", function (e) {
+        if (e.target.closest('[data-drawer-open="' + drawerName + '"]')) {
+            openDrawer();
+        }
+        if (e.target.closest('[data-drawer-close="' + drawerName + '"]')) {
+            closeDrawer();
+        }
+    });
+    overlay.addEventListener("click", closeDrawer);
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !drawer.hidden) closeDrawer();
+    });
+
+    document.body.addEventListener("periodes-mises-a-jour", closeDrawer);
+})();
+</script>
+{% endblock %}

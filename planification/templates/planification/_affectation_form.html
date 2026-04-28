@@ -1,0 +1,69 @@
+<header class="drawer-head">
+    <div class="drawer-head-row">
+        <div>
+            <h2 id="drawer-ajouter-affectation-titre" class="drawer-title">Nouvelle affectation</h2>
+            <p class="drawer-sub" id="affectation-form-jour-libelle">Choisissez l'activité et la personne.</p>
+        </div>
+        <button type="button"
+                class="btn btn-ghost btn-sm drawer-close"
+                data-drawer-close="ajouter-affectation"
+                aria-label="Fermer">
+            ×
+        </button>
+    </div>
+</header>
+
+<div class="drawer-body">
+    <form method="post"
+          action="{% url 'planification:affectation-create' periode_id=periode.pk %}"
+          hx-post="{% url 'planification:affectation-create' periode_id=periode.pk %}"
+          hx-target="#affectations-liste-zone"
+          hx-swap="outerHTML"
+          class="drawer-form"
+          id="affectation-form"
+          novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="jour" id="affectation-form-jour" value="">
+
+        <div class="field">
+            <label for="affectation-form-activite" class="field-label">Activité</label>
+            <select name="activite_id"
+                    id="affectation-form-activite"
+                    class="field-input"
+                    required>
+                <option value="">— Choisir une activité —</option>
+                {% for categorie, activites in activites_par_categorie.items %}
+                <optgroup label="{{ categorie.nom }}">
+                    {% for activite in activites %}
+                    <option value="{{ activite.pk }}">{{ activite.titre }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="affectation-form-membre" class="field-label">Personne</label>
+            <select name="membre_id"
+                    id="affectation-form-membre"
+                    class="field-input"
+                    required>
+                <option value="">— Choisir une personne —</option>
+                {% for membre in membres %}
+                <option value="{{ membre.pk }}">
+                    {{ membre.user.first_name|default:membre.user.email }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="btn-row end" style="margin-top: 24px;">
+            <button type="button"
+                    class="btn btn-ghost"
+                    data-drawer-close="ajouter-affectation">
+                Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">Ajouter</button>
+        </div>
+    </form>
+</div>
