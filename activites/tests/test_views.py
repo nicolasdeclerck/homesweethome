@@ -64,6 +64,22 @@ def test_liste_n_affiche_pas_les_activites_d_un_autre_foyer():
     assert "Tâche d'un autre foyer" not in response.content.decode("utf-8")
 
 
+def test_liste_affiche_un_bouton_crayon_par_activite():
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer, titre="Vaisselle")
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(reverse("activites:activite-liste"))
+
+    content = response.content.decode("utf-8")
+    expected_url = reverse(
+        "activites:activite-modifier", kwargs={"activite_id": activite.pk}
+    )
+    assert 'hx-get="' + expected_url + '"' in content
+    assert 'aria-label="Modifier Vaisselle"' in content
+
+
 def test_liste_propose_les_categories_existantes_dans_le_datalist():
     membre = MembreFoyerFactory()
     CategorieFactory(foyer=membre.foyer, nom="Cuisine")
@@ -82,7 +98,7 @@ def test_liste_propose_les_categories_existantes_dans_le_datalist():
 # ---------------------------------------------------------------------------
 
 
-def test_create_get_redirige_vers_la_liste():
+def test_create_get_non_htmx_redirige_vers_la_liste():
     user = UserFactory()
     client = Client()
     client.force_login(user)
@@ -91,6 +107,25 @@ def test_create_get_redirige_vers_la_liste():
 
     assert response.status_code == 302
     assert response.url == reverse("activites:activite-liste")
+
+
+def test_create_get_htmx_renvoie_le_form_de_creation():
+    """GET HTMX → fragment "création" frais (utilisé pour réinitialiser
+    le drawer après édition)."""
+    membre = MembreFoyerFactory()
+    client = Client()
+    client.force_login(membre.user)
+
+    response = client.get(
+        reverse("activites:activite-create"),
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert 'action="' + reverse("activites:activite-create") + '"' in content
+    assert "Nouvelle activité" in content
+    assert "Ajouter" in content
 
 
 def test_create_post_non_htmx_cree_et_redirige():
@@ -179,6 +214,180 @@ def test_create_anonymous_redirects_to_login():
 
     assert response.status_code == 302
     assert reverse("comptes:connexion") in response.url
+
+
+# ---------------------------------------------------------------------------
+# ActiviteUpdateView
+# ---------------------------------------------------------------------------
+
+
+def test_update_anonymous_redirects_to_login():
+    client = Client()
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": 1})
+    )
+
+    assert response.status_code == 302
+    assert reverse("comptes:connexion") in response.url
+
+
+def test_update_get_non_htmx_redirige_vers_la_liste():
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer)
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk})
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse("activites:activite-liste")
+
+
+def test_update_get_htmx_renvoie_le_form_prerempli():
+    membre = MembreFoyerFactory()
+    cuisine = CategorieFactory(foyer=membre.foyer, nom="Cuisine")
+    activite = ActiviteFactory(
+        foyer=membre.foyer, categorie=cuisine, titre="Faire la vaisselle"
+    )
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert 'value="Faire la vaisselle"' in content
+    assert 'value="Cuisine"' in content
+    # L'apostrophe est échappée par Django (`&#x27;`) — d'où le match en deux temps.
+    assert "Modifier" in content and "activité" in content
+    assert "Enregistrer" in content
+    expected_action = reverse(
+        "activites:activite-modifier", kwargs={"activite_id": activite.pk}
+    )
+    assert 'action="' + expected_action + '"' in content
+
+
+def test_update_get_pour_activite_d_un_autre_foyer_renvoie_404():
+    membre = MembreFoyerFactory()
+    autre_membre = MembreFoyerFactory()
+    activite_autre = ActiviteFactory(foyer=autre_membre.foyer)
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(
+        reverse(
+            "activites:activite-modifier", kwargs={"activite_id": activite_autre.pk}
+        ),
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_post_htmx_modifie_l_activite():
+    membre = MembreFoyerFactory()
+    cuisine = CategorieFactory(foyer=membre.foyer, nom="Cuisine")
+    activite = ActiviteFactory(
+        foyer=membre.foyer, categorie=cuisine, titre="Vaisselle"
+    )
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.post(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        {"titre": "Vider le lave-vaisselle", "categorie_nom": "Rangement"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    assert response["HX-Trigger"] == "activites-mises-a-jour"
+    activite.refresh_from_db()
+    assert activite.titre == "Vider le lave-vaisselle"
+    assert activite.categorie.nom == "Rangement"
+    # Toujours une seule activité dans le foyer (pas de double).
+    assert Activite.objects.filter(foyer=membre.foyer).count() == 1
+
+
+def test_update_post_pour_activite_d_un_autre_foyer_renvoie_404():
+    membre = MembreFoyerFactory()
+    autre_membre = MembreFoyerFactory()
+    activite_autre = ActiviteFactory(
+        foyer=autre_membre.foyer, titre="Original"
+    )
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.post(
+        reverse(
+            "activites:activite-modifier", kwargs={"activite_id": activite_autre.pk}
+        ),
+        {"titre": "Hijack", "categorie_nom": "X"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 404
+    activite_autre.refresh_from_db()
+    assert activite_autre.titre == "Original"
+
+
+def test_update_post_htmx_avec_titre_vide_renvoie_400():
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer, titre="Avant")
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.post(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        {"titre": "  ", "categorie_nom": "Cuisine"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 400
+    assert "HX-Trigger" not in response
+    activite.refresh_from_db()
+    assert activite.titre == "Avant"
+
+
+def test_update_post_preserve_les_evaluations():
+    from evaluations.models import Evaluation
+    from evaluations.tests.factories import EvaluationFactory
+
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer, titre="Avant")
+    evaluation = EvaluationFactory(user=membre.user, activite=activite)
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.post(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        {"titre": "Après", "categorie_nom": "Nouvelle catégorie"},
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    assert Evaluation.objects.filter(pk=evaluation.pk).exists()
+
+
+def test_update_post_non_htmx_modifie_et_redirige():
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer, titre="Avant")
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.post(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        {"titre": "Après", "categorie_nom": "Cuisine"},
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse("activites:activite-liste")
+    activite.refresh_from_db()
+    assert activite.titre == "Après"
 
 
 # ---------------------------------------------------------------------------

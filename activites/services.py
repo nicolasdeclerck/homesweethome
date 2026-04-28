@@ -42,6 +42,25 @@ def creer_activite(*, foyer: Foyer, titre: str, categorie_nom: str) -> Activite:
     )
 
 
+def mettre_a_jour_activite(
+    activite: Activite, *, titre: str, categorie_nom: str
+) -> Activite:
+    """Met à jour le titre et la catégorie d'une activité existante.
+
+    La catégorie cible est résolue/créée dans le foyer de l'activité,
+    avec la même normalisation que pour la création (cf.
+    `get_or_create_categorie`). Les évaluations liées à l'activité
+    restent intactes : on modifie uniquement deux champs sur la ligne.
+    """
+    categorie, _ = get_or_create_categorie(
+        foyer=activite.foyer, nom=categorie_nom
+    )
+    activite.titre = titre.strip()
+    activite.categorie = categorie
+    activite.save(update_fields=["titre", "categorie"])
+    return activite
+
+
 def lister_activites_par_categorie(
     foyer: Foyer,
     *,

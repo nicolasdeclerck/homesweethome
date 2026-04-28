@@ -1323,11 +1323,20 @@ html.no-grid {
   opacity: 0.7;
 }
 .act-list .act-row {
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  padding: 14px 4px;
+  display: flex;
+  align-items: stretch;
+  grid-template-columns: none;
+  gap: 0;
+  padding: 0;
 }
 .act-row-link {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
@@ -1335,8 +1344,28 @@ html.no-grid {
 .act-row-link:hover { background: var(--paper); }
 .act-row-link:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
   border-radius: var(--radius);
+}
+.act-row-edit-btn {
+  flex: 0 0 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius);
+}
+.act-row-edit-btn:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+.act-row-edit-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* ── Drawer (right-side panel) ───────── */

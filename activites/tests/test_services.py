@@ -3,6 +3,7 @@ from activites.services import (
     creer_activite,
     get_or_create_categorie,
     lister_activites_par_categorie,
+    mettre_a_jour_activite,
 )
 from activites.tests.factories import ActiviteFactory, CategorieFactory
 from foyer.tests.factories import FoyerFactory
@@ -71,6 +72,70 @@ def test_creer_activite_isole_les_foyers():
 
     assert Categorie.objects.filter(foyer=foyer_b).count() == 1
     assert Activite.objects.filter(foyer=foyer_a).count() == 0
+
+
+def test_mettre_a_jour_activite_change_titre_et_categorie():
+    foyer = FoyerFactory()
+    cuisine = CategorieFactory(foyer=foyer, nom="Cuisine")
+    activite = ActiviteFactory(
+        foyer=foyer, categorie=cuisine, titre="Faire la vaisselle"
+    )
+
+    mettre_a_jour_activite(
+        activite, titre="Vider le lave-vaisselle", categorie_nom="Rangement"
+    )
+
+    activite.refresh_from_db()
+    assert activite.titre == "Vider le lave-vaisselle"
+    assert activite.categorie.nom == "Rangement"
+    # Nouvelle catégorie créée dans le foyer.
+    assert Categorie.objects.filter(foyer=foyer, nom="Rangement").exists()
+
+
+def test_mettre_a_jour_activite_reutilise_categorie_existante():
+    foyer = FoyerFactory()
+    cuisine = CategorieFactory(foyer=foyer, nom="Cuisine")
+    rangement = CategorieFactory(foyer=foyer, nom="Rangement")
+    activite = ActiviteFactory(foyer=foyer, categorie=cuisine, titre="X")
+
+    # Casse différente : doit retomber sur la catégorie existante.
+    mettre_a_jour_activite(activite, titre="X", categorie_nom="rangement")
+
+    activite.refresh_from_db()
+    assert activite.categorie_id == rangement.pk
+    assert Categorie.objects.filter(foyer=foyer).count() == 2
+
+
+def test_mettre_a_jour_activite_normalise_le_titre():
+    foyer = FoyerFactory()
+    activite = ActiviteFactory(foyer=foyer)
+
+    mettre_a_jour_activite(
+        activite, titre="  Sortir les poubelles  ", categorie_nom="Maison"
+    )
+
+    activite.refresh_from_db()
+    assert activite.titre == "Sortir les poubelles"
+
+
+def test_mettre_a_jour_activite_preserve_les_evaluations():
+    from comptes.tests.factories import UserFactory
+    from evaluations.models import Evaluation
+    from evaluations.tests.factories import EvaluationFactory
+
+    foyer = FoyerFactory()
+    user = UserFactory()
+    activite = ActiviteFactory(foyer=foyer, titre="Avant")
+    evaluation = EvaluationFactory(user=user, activite=activite)
+
+    mettre_a_jour_activite(
+        activite, titre="Après", categorie_nom="Nouvelle catégorie"
+    )
+
+    # L'évaluation pointe toujours sur la même ligne, intacte.
+    assert Evaluation.objects.filter(pk=evaluation.pk).exists()
+    evaluation.refresh_from_db()
+    assert evaluation.activite_id == activite.pk
 
 
 def test_lister_activites_par_categorie_groupe_et_trie():
