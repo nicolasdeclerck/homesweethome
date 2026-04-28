@@ -40,9 +40,15 @@ class _ActivitesFoyerMixin(LoginRequiredMixin):
         return super().dispatch(request, *args, **kwargs)
 
 
-def _contexte_liste(foyer):
-    """Contexte partagé entre la vue page et le fragment de liste."""
-    activites_par_categorie = lister_activites_par_categorie(foyer)
+def _contexte_liste(foyer, *, user=None):
+    """Contexte partagé entre la vue page et le fragment de liste.
+
+    Quand `user` est fourni, chaque `Activite` est annotée avec
+    `evaluee_par_user` (cf. `lister_activites_par_categorie`) — utilisé
+    pour rendre le label « Évaluée » / « À évaluer » à droite de chaque
+    ligne.
+    """
+    activites_par_categorie = lister_activites_par_categorie(foyer, user=user)
     nb_activites = sum(len(v) for v in activites_par_categorie.values())
     return {
         "foyer": foyer,
@@ -59,7 +65,7 @@ class ActivitesListView(_ActivitesFoyerMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(_contexte_liste(self.request.foyer))
+        context.update(_contexte_liste(self.request.foyer, user=self.request.user))
         context["form"] = ActiviteCreationForm()
         context["active_nav"] = "activites"
         return context
@@ -90,7 +96,7 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
                     },
                     status=400,
                 )
-            context = _contexte_liste(request.foyer)
+            context = _contexte_liste(request.foyer, user=request.user)
             context["form"] = form
             context["active_nav"] = "activites"
             return render(request, "activites/liste.html", context, status=400)
@@ -125,7 +131,7 @@ class ActivitesListeFragmentView(_ActivitesFoyerMixin, View):
     template_liste = "activites/_activites_liste.html"
 
     def get(self, request):
-        contexte = _contexte_liste(request.foyer)
+        contexte = _contexte_liste(request.foyer, user=request.user)
         # Active le span OOB qui rafraîchit le compteur du sous-titre.
         contexte["oob_compteur"] = True
         return render(request, self.template_liste, contexte)

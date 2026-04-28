@@ -1,0 +1,48 @@
+<div class="rate-label">Vos évaluations</div>
+
+{% if succes %}
+<div class="success-banner" role="status">
+    {% include "partials/icons/_check.html" %}
+    <span>Évaluation enregistrée.</span>
+</div>
+{% endif %}
+
+<form method="post"
+      action="{% url 'evaluations:activite-evaluer' activite_id=activite.pk %}"
+      hx-post="{% url 'evaluations:activite-evaluer' activite_id=activite.pk %}"
+      hx-target="#evaluation-form-zone"
+      hx-swap="innerHTML"
+      novalidate>
+    {% csrf_token %}
+
+    {% for field in form %}
+    <div class="rate-block">
+        <div class="rate-label">{{ field.label }}</div>
+        <div class="rate-row" role="radiogroup" aria-label="{{ field.label }}">
+            {% for note in "12345" %}
+            <label class="rate-btn{% if field.value|default:3|stringformat:'s' == note %} selected{% endif %}">
+                <input type="radio"
+                       name="{{ field.name }}"
+                       value="{{ note }}"
+                       {% if field.value|default:3|stringformat:'s' == note %}checked{% endif %}
+                       style="position:absolute;opacity:0;pointer-events:none;">
+                {{ note }}
+            </label>
+            {% endfor %}
+        </div>
+        <div class="rate-legend">
+            <span>1 — peu</span>
+            <span>5 — beaucoup</span>
+        </div>
+        {% if field.errors %}
+        <div class="field-hint" style="color: var(--accent); margin-top: 6px;">
+            {{ field.errors|join:" " }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="btn-row end" style="margin-top: 24px;">
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </div>
+</form>

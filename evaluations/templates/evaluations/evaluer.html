@@ -1,0 +1,87 @@
+{% extends "app_base.html" %}
+
+{% block title %}{{ activite.titre }} — HomeSweetHome{% endblock %}
+
+{% block app_content %}
+<div class="content-medium">
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+        <div class="success-banner" role="status">
+            {% include "partials/icons/_check.html" %}
+            <span>{{ message }}</span>
+        </div>
+        {% endif %}
+    {% endfor %}
+
+    <header class="page-head">
+        <div>
+            <p class="muted sm">
+                <a href="{% url 'activites:activite-liste' %}" class="muted">← Activités</a>
+                · {{ activite.categorie.nom }}
+            </p>
+            <h1 class="page-title">{{ activite.titre }}</h1>
+            <p class="muted">
+                Évaluez la charge de cette activité sur une échelle de 1 à 5.
+            </p>
+        </div>
+    </header>
+
+    <section class="rate-layout" style="margin-top: 16px;">
+        <div class="rate-left">
+            <div class="rate-label">
+                {% if autre_membre %}
+                    {{ autre_membre.first_name|default:autre_membre.email }}
+                {% else %}
+                    Autre membre du foyer
+                {% endif %}
+            </div>
+            {% if autre_membre and evaluation_autre %}
+                {% include "evaluations/_charge_dots.html" with libelle="Charge mentale" valeur=evaluation_autre.charge_mentale %}
+                {% include "evaluations/_charge_dots.html" with libelle="Charge physique" valeur=evaluation_autre.charge_physique %}
+                {% include "evaluations/_charge_dots.html" with libelle="Durée" valeur=evaluation_autre.duree %}
+            {% elif autre_membre %}
+                <p class="muted" style="margin-top: 12px;">Pas encore évalué.</p>
+            {% else %}
+                <p class="muted" style="margin-top: 12px;">
+                    Vous êtes seul·e dans le foyer pour le moment.
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="rate-right" id="evaluation-form-zone">
+            {% include "evaluations/_evaluation_form.html" %}
+        </div>
+    </section>
+</div>
+
+<script>
+(function () {
+    // Synchronise la classe `.selected` sur les .rate-btn avec l'état des
+    // radios qu'ils contiennent. Délégation sur `body` pour rester actif
+    // après les swaps HTMX du fragment de formulaire.
+    function refreshSelected(row) {
+        row.querySelectorAll(".rate-btn").forEach(function (btn) {
+            const radio = btn.querySelector("input[type=radio]");
+            if (radio && radio.checked) {
+                btn.classList.add("selected");
+            } else {
+                btn.classList.remove("selected");
+            }
+        });
+    }
+
+    function refreshAll() {
+        document.querySelectorAll(".rate-row").forEach(refreshSelected);
+    }
+
+    document.body.addEventListener("change", function (e) {
+        if (e.target.matches(".rate-row input[type=radio]")) {
+            refreshSelected(e.target.closest(".rate-row"));
+        }
+    });
+
+    document.body.addEventListener("htmx:afterSwap", refreshAll);
+    refreshAll();
+})();
+</script>
+{% endblock %}

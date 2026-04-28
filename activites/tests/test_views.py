@@ -234,3 +234,36 @@ def test_liste_full_page_n_active_pas_l_oob_compteur():
 
     content = response.content.decode("utf-8")
     assert "hx-swap-oob" not in content
+
+
+def test_liste_affiche_pill_a_evaluer_si_user_n_a_pas_evalue():
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer, titre="Faire la vaisselle")
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(reverse("activites:activite-liste"))
+
+    content = response.content.decode("utf-8")
+    assert "À évaluer" in content
+    assert "Évaluée" not in content
+    # La ligne doit être un lien vers l'écran d'évaluation.
+    assert reverse(
+        "evaluations:activite-evaluer", kwargs={"activite_id": activite.pk}
+    ) in content
+
+
+def test_liste_affiche_pill_evaluee_si_user_a_evalue():
+    from evaluations.tests.factories import EvaluationFactory
+
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer)
+    EvaluationFactory(user=membre.user, activite=activite)
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(reverse("activites:activite-liste"))
+
+    content = response.content.decode("utf-8")
+    assert "Évaluée" in content
+    assert "À évaluer" not in content

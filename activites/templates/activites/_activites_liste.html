@@ -15,11 +15,17 @@
                 <span class="act-cat-count">{{ activites|length }}</span>
             </div>
             {% for activite in activites %}
-            <div class="act-row">
+            <a class="act-row act-row-link{% if not activite.evaluee_par_user %} act-row-pending{% endif %}"
+               href="{% url 'evaluations:activite-evaluer' activite_id=activite.pk %}">
                 <div class="act-grow">
                     <div class="act-title">{{ activite.titre }}</div>
                 </div>
-            </div>
+                {% if activite.evaluee_par_user %}
+                <span class="ev-pill ev-done">Évaluée</span>
+                {% else %}
+                <span class="ev-pill ev-wait">À évaluer</span>
+                {% endif %}
+            </a>
             {% endfor %}
             {% endfor %}
         </div>
