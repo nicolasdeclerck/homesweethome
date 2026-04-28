@@ -72,9 +72,11 @@ Before planning, explore the codebase:
 3. Identify tests that cover the affected area.
 4. Note any project conventions (CLAUDE.md, CONTRIBUTING.md, lint config, commit style).
 
-### 3. Plan and confirm
+### 3. Plan internally
 
-Produce a **short, concrete plan** and share it with the user before coding:
+Form a **short, concrete plan** to guide implementation — keep it internal, do **not** pause to request the user's approval. Once Phase 1 (load issue) and Phase 2 (understand code) are done, move straight to Phase 4 and start coding.
+
+The plan should still cover, in your head or via `TodoWrite`:
 
 - Files to create/modify (with paths).
 - High-level approach per file.
@@ -82,7 +84,13 @@ Produce a **short, concrete plan** and share it with the user before coding:
 - Risks / open questions.
 - Commands to verify locally (build, test, lint).
 
-**Wait for explicit user approval** unless the issue is trivial (typo, one-line fix) and the user asked to proceed autonomously. See `references/workflow.md` for edge cases.
+**Only pause and confirm with the user** if the plan surfaces real ambiguity that the issue alone can't resolve:
+
+- Contradictory acceptance criteria.
+- Scope clearly larger than what the issue describes.
+- Irreversible or high-blast-radius decisions (data migration, breaking API change, deletion of existing behavior).
+
+See `references/workflow.md` for edge cases.
 
 ### 4. Prepare the branch
 
