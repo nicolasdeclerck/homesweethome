@@ -31,11 +31,13 @@ def test_membrefoyer_str_includes_user_and_foyer():
 
 
 def test_membrefoyer_user_is_unique():
-    user = UserFactory()
-    MembreFoyerFactory(user=user)
+    membre = MembreFoyerFactory()
+    autre_foyer = FoyerFactory()
 
+    # `MembreFoyerFactory` est idempotente sur `user` (cf. signal de bascule),
+    # on tape donc directement l'ORM pour vérifier la contrainte OneToOneField.
     with pytest.raises(IntegrityError):
-        MembreFoyerFactory(user=user)
+        MembreFoyer.objects.create(user=membre.user, foyer=autre_foyer)
 
 
 def test_deleting_user_cascades_to_membrefoyer():

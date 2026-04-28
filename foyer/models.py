@@ -34,14 +34,23 @@ class Foyer(models.Model):
 
 
 class MembreFoyer(models.Model):
+    # Décision produit : un user appartient à au plus un foyer (OneToOne).
+    # À revisiter via ADR si on ouvre les cas "résidence secondaire" ou
+    # "foyer recomposé" (cf. issue #11).
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
+        # CASCADE volontaire (RGPD) : la suppression d'un user efface son
+        # rattachement, conformément au droit à l'effacement. Déroge à la
+        # convention PROTECT par défaut documentée dans CLAUDE.md.
         on_delete=models.CASCADE,
         related_name="membrefoyer",
         verbose_name="utilisateur",
     )
     foyer = models.ForeignKey(
         Foyer,
+        # CASCADE volontaire : si le foyer est supprimé (cas RGPD ou décision
+        # explicite du créateur), les rattachements n'ont plus de sens.
+        # Déroge à la convention PROTECT par défaut documentée dans CLAUDE.md.
         on_delete=models.CASCADE,
         related_name="membres",
         verbose_name="foyer",
@@ -62,6 +71,7 @@ class Invitation(models.Model):
         EN_ATTENTE = "en_attente", "En attente"
         ACCEPTEE = "acceptee", "Acceptée"
         ANNULEE = "annulee", "Annulée"
+        EXPIREE = "expiree", "Expirée"
 
     foyer = models.ForeignKey(
         Foyer,

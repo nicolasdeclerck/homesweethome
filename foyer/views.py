@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseForbidden
+from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView, View
+from django_ratelimit.decorators import ratelimit
 
 from .forms import AccepterInvitationNouveauCompteForm, InvitationCreationForm
 from .models import Invitation, MembreFoyer
@@ -12,7 +14,9 @@ from .services import (
     EmailDansAutreFoyerError,
     EmailDejaMembreError,
     InvitationDejaEnAttenteError,
+    InvitationDejaTraiteeError,
     InvitationInvalideError,
+    PermissionInvitationRefuseeError,
     accepter_invitation,
     annuler_invitation,
     creer_invitation,
@@ -39,7 +43,16 @@ class MonFoyerView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        foyer = get_or_create_foyer_for_user(self.request.user)
+        membre = _membre_foyer_du_user(self.request.user)
+        if membre is not None:
+            foyer = membre.foyer
+        else:
+            # Filet de sécurité : le signal `post_save(User)` a normalement
+            # déjà créé le foyer. Si on arrive ici, c'est un user antérieur
+            # à l'introduction du signal — on rétablit l'invariant sans
+            # planter, mais on évite ainsi tout effet de bord en GET sur
+            # le parcours nominal.
+            foyer = get_or_create_foyer_for_user(self.request.user)
         est_createur = foyer.cree_par_id == self.request.user.pk
         context["foyer"] = foyer
         context["membres"] = foyer.membres.select_related("user").all()
@@ -160,8 +173,10 @@ class InvitationLinkView(_CreateurFoyerRequiredMixin, View):
             Invitation,
             pk=pk,
             foyer=request.foyer,
-            statut=Invitation.Statut.EN_ATTENTE,
         )
+        # Aligné sur `est_utilisable` : refuse si statut != EN_ATTENTE OU expiré.
+        if not invitation.est_utilisable:
+            raise Http404
         return render(
             request,
             self.template_lien,
@@ -184,8 +199,12 @@ class InvitationCancelView(_CreateurFoyerRequiredMixin, View):
         )
         try:
             annuler_invitation(invitation, par_user=request.user)
-        except InvitationInvalideError:
-            pass  # invitation déjà acceptée/annulée → on renvoie la liste à jour
+        except PermissionInvitationRefuseeError:
+            return HttpResponseForbidden(
+                "Seul le créateur de l'invitation peut l'annuler."
+            )
+        except InvitationDejaTraiteeError:
+            pass  # idempotent : on renvoie la liste à jour sans erreur
 
         invitations = list(
             request.foyer.invitations.filter(
@@ -201,6 +220,12 @@ class InvitationCancelView(_CreateurFoyerRequiredMixin, View):
         return response
 
 
+@method_decorator(
+    # Limite les acceptations (POST) à 10/h/IP — le token a 48 octets d'entropie
+    # mais on durcit aussi le brute-force volumétrique.
+    ratelimit(key="ip", rate="10/h", method="POST", block=True),
+    name="post",
+)
 class AccepterInvitationView(View):
     template_page = "foyer/accepter_invitation.html"
     template_invalide = "foyer/invitation_invalide.html"

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -130,6 +131,60 @@ def test_creer_invitation_refuse_doublon_en_attente_et_renvoie_existante():
         )
 
     assert exc_info.value.invitation.pk == existante.pk
+
+
+def test_creer_invitation_recupere_l_existante_si_la_contrainte_unique_se_declenche():
+    """Filet anti-race-condition : si une autre transaction a inséré une
+    invitation entre notre `filter().first()` et notre `create()`, la
+    contrainte ``unique_invitation_en_attente_par_foyer_email`` lève une
+    `IntegrityError` qu'on convertit en `InvitationDejaEnAttenteError`
+    portant l'invitation gagnante.
+
+    On simule la course en patchant la 1re recherche de duplicat pour qu'elle
+    renvoie ``None`` alors qu'une invitation existe déjà — ce qui force le
+    chemin "création → IntegrityError → re-fetch".
+    """
+    foyer = FoyerFactory()
+    deja_creee = InvitationFactory(
+        foyer=foyer,
+        email="marie@example.com",
+        cree_par=foyer.cree_par,
+    )
+
+    real_filter = Invitation.objects.filter
+
+    def fake_filter(*args, **kwargs):
+        # On masque uniquement la requête "y a-t-il déjà une invitation
+        # EN_ATTENTE pour ce couple ?", pour simuler la fenêtre de course.
+        if (
+            kwargs.get("statut") == Invitation.Statut.EN_ATTENTE
+            and "foyer" in kwargs
+            and "email" in kwargs
+        ):
+            mocked_qs = mock.MagicMock()
+            mocked_qs.first.return_value = None
+            return mocked_qs
+        return real_filter(*args, **kwargs)
+
+    with mock.patch.object(Invitation.objects, "filter", side_effect=fake_filter):
+        with pytest.raises(InvitationDejaEnAttenteError) as exc_info:
+            creer_invitation(
+                foyer=foyer,
+                email="marie@example.com",
+                prenom="Marie",
+                cree_par=foyer.cree_par,
+            )
+
+    assert exc_info.value.invitation.pk == deja_creee.pk
+    # Aucune nouvelle invitation n'a été créée par-dessus la contrainte.
+    assert (
+        Invitation.objects.filter(
+            foyer=foyer,
+            email="marie@example.com",
+            statut=Invitation.Statut.EN_ATTENTE,
+        ).count()
+        == 1
+    )
 
 
 def test_creer_invitation_acceptee_anterieure_ne_bloque_pas():

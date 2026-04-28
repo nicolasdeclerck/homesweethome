@@ -42,6 +42,22 @@ class InvitationInvalideError(InvitationError):
     code = "invalide"
 
 
+class InvitationDejaTraiteeError(InvitationInvalideError):
+    """Levée quand l'invitation n'est plus en attente (acceptée/annulée/expirée).
+
+    Sémantique idempotente : le caller peut traiter cette erreur comme un
+    no-op (l'état cible est déjà atteint).
+    """
+
+    code = "deja_traitee"
+
+
+class PermissionInvitationRefuseeError(InvitationInvalideError):
+    """Levée quand l'utilisateur n'a pas le droit d'opérer sur l'invitation."""
+
+    code = "permission_refusee"
+
+
 def compute_default_foyer_name(email: str) -> str:
     """Calcule un nom de foyer par défaut depuis une adresse e-mail.
 
@@ -128,12 +144,17 @@ def creer_invitation(
         )
 
     try:
-        return Invitation.objects.create(
-            foyer=foyer,
-            email=email_norm,
-            prenom=prenom.strip(),
-            cree_par=cree_par,
-        )
+        # Savepoint dédié : garantit qu'une `IntegrityError` levée par la
+        # contrainte unique ne casse pas la transaction parente — sinon
+        # le `Invitation.objects.get(...)` ci-dessous échouerait avec
+        # `TransactionManagementError`.
+        with transaction.atomic():
+            return Invitation.objects.create(
+                foyer=foyer,
+                email=email_norm,
+                prenom=prenom.strip(),
+                cree_par=cree_par,
+            )
     except IntegrityError as exc:  # garde-fou en cas de race condition
         raise InvitationDejaEnAttenteError(
             "Une invitation est déjà en cours pour cette adresse.",
@@ -146,11 +167,20 @@ def creer_invitation(
 
 
 def annuler_invitation(invitation: Invitation, *, par_user) -> Invitation:
-    """Annule une invitation. Le caller doit déjà avoir vérifié les permissions."""
+    """Annule une invitation.
+
+    Lève :
+    - :class:`PermissionInvitationRefuseeError` si l'utilisateur n'est pas
+      le créateur de l'invitation (à mapper sur un 403 côté HTTP) ;
+    - :class:`InvitationDejaTraiteeError` si l'invitation n'est plus en
+      attente (à traiter en idempotent côté HTTP : 200 sans changement).
+    """
     if invitation.cree_par_id != par_user.pk:
-        raise InvitationInvalideError("Seul le créateur du foyer peut annuler.")
+        raise PermissionInvitationRefuseeError(
+            "Seul le créateur du foyer peut annuler."
+        )
     if invitation.statut != Invitation.Statut.EN_ATTENTE:
-        raise InvitationInvalideError("Cette invitation n'est plus en attente.")
+        raise InvitationDejaTraiteeError("Cette invitation n'est plus en attente.")
     invitation.statut = Invitation.Statut.ANNULEE
     invitation.save(update_fields=["statut"])
     return invitation
@@ -203,7 +233,7 @@ def accepter_invitation(
         user = User.objects.filter(email__iexact=invitation_email).first()
         if user is not None:
             raise InvitationInvalideError(
-                "Un compte existe déjà pour cette adresse, connecte-toi pour accepter."
+                "Un compte existe déjà pour cette adresse, connectez-vous pour accepter."
             )
         user = User.objects.create_user(
             email=invitation_email,
@@ -211,12 +241,30 @@ def accepter_invitation(
             first_name=invitation.prenom,
         )
 
-    if MembreFoyer.objects.filter(user=user).exists():
-        raise InvitationInvalideError(
-            "Cet utilisateur est déjà membre d'un foyer."
+    # Le signal `post_save(User)` crée d'office un foyer "personnel" pour tout
+    # nouvel utilisateur. Quand cet utilisateur accepte une invitation, on
+    # bascule silencieusement son rattachement vers le foyer de l'inviteur.
+    # Pour les utilisateurs existants déjà membres d'un foyer partagé, on
+    # refuse — un user n'est membre que d'un seul foyer.
+    membre_existant = (
+        MembreFoyer.objects.select_related("foyer").filter(user=user).first()
+    )
+    if membre_existant is None:
+        MembreFoyer.objects.create(user=user, foyer=invitation.foyer)
+    else:
+        foyer_existant = membre_existant.foyer
+        est_foyer_personnel_solo = (
+            foyer_existant.pk != invitation.foyer.pk
+            and foyer_existant.cree_par_id == user.pk
+            and foyer_existant.membres.count() == 1
         )
-
-    MembreFoyer.objects.create(user=user, foyer=invitation.foyer)
+        if not est_foyer_personnel_solo:
+            raise InvitationInvalideError(
+                "Cet utilisateur est déjà membre d'un foyer."
+            )
+        membre_existant.foyer = invitation.foyer
+        membre_existant.save(update_fields=["foyer"])
+        foyer_existant.delete()
     invitation.statut = Invitation.Statut.ACCEPTEE
     invitation.save(update_fields=["statut"])
 
