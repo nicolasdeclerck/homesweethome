@@ -24,7 +24,7 @@ def enregistrer_evaluation(
 
     Crée la ligne si absente, met à jour les 3 critères et `date_maj`
     sinon. Le caller doit s'être assuré que `activite.foyer` correspond
-    au foyer de l'user (cf. `EvaluationView`).
+    au foyer de l'user (garde-fou côté vue `ActiviteUpdateView`).
     """
     evaluation, _ = Evaluation.objects.update_or_create(
         user=user,

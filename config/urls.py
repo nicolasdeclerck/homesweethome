@@ -20,6 +20,5 @@ urlpatterns = [
     path("", RootRedirectView.as_view(), name="root"),
     path("foyer/", include("foyer.urls")),
     path("activites/", include("activites.urls")),
-    path("evaluations/", include("evaluations.urls")),
     path("", include("comptes.urls")),
 ]

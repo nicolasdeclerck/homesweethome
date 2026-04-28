@@ -1340,6 +1340,10 @@ html.no-grid {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: inherit;
+  background: transparent;
+  border: 0;
 }
 .act-row-link:hover { background: var(--paper); }
 .act-row-link:focus-visible {
