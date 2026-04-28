@@ -16,8 +16,13 @@
             </div>
             {% for activite in activites %}
             <div class="act-row{% if not activite.evaluee_par_user %} act-row-pending{% endif %}">
-                <a class="act-row-link"
-                   href="{% url 'evaluations:activite-evaluer' activite_id=activite.pk %}">
+                <button type="button"
+                        class="act-row-link"
+                        hx-get="{% url 'activites:activite-modifier' activite_id=activite.pk %}"
+                        hx-target="#activite-form-zone"
+                        hx-swap="innerHTML"
+                        data-drawer-open="ajouter-activite"
+                        aria-label="Évaluer {{ activite.titre }}">
                     <div class="act-grow">
                         <div class="act-title">{{ activite.titre }}</div>
                     </div>
@@ -26,7 +31,7 @@
                     {% else %}
                     <span class="ev-pill ev-wait">À évaluer</span>
                     {% endif %}
-                </a>
+                </button>
                 <button type="button"
                         class="act-row-edit-btn"
                         hx-get="{% url 'activites:activite-modifier' activite_id=activite.pk %}"

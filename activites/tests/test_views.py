@@ -456,10 +456,13 @@ def test_liste_affiche_pill_a_evaluer_si_user_n_a_pas_evalue():
     content = response.content.decode("utf-8")
     assert "À évaluer" in content
     assert "Évaluée" not in content
-    # La ligne doit être un lien vers l'écran d'évaluation.
-    assert reverse(
-        "evaluations:activite-evaluer", kwargs={"activite_id": activite.pk}
-    ) in content
+    # La ligne ouvre désormais le drawer d'édition/évaluation (HTMX),
+    # plus de page dédiée d'évaluation.
+    expected_url = reverse(
+        "activites:activite-modifier", kwargs={"activite_id": activite.pk}
+    )
+    assert 'hx-get="' + expected_url + '"' in content
+    assert 'aria-label="Évaluer Faire la vaisselle"' in content
 
 
 def test_liste_affiche_pill_evaluee_si_user_a_evalue():
@@ -476,3 +479,232 @@ def test_liste_affiche_pill_evaluee_si_user_a_evalue():
     content = response.content.decode("utf-8")
     assert "Évaluée" in content
     assert "À évaluer" not in content
+
+
+# ---------------------------------------------------------------------------
+# Drawer combiné : édition + évaluation dans le même formulaire
+# ---------------------------------------------------------------------------
+
+
+def test_create_get_htmx_affiche_les_3_criteres_d_evaluation():
+    """En mode création, le drawer doit déjà exposer les 3 rate-blocks."""
+    membre = MembreFoyerFactory()
+    client = Client()
+    client.force_login(membre.user)
+
+    response = client.get(
+        reverse("activites:activite-create"), HTTP_HX_REQUEST="true"
+    )
+
+    content = response.content.decode("utf-8")
+    assert "Vos évaluations" in content
+    assert 'name="charge_mentale"' in content
+    assert 'name="charge_physique"' in content
+    assert 'name="duree"' in content
+
+
+def test_create_get_htmx_n_affiche_pas_le_bloc_autre_membre():
+    """En création il n'y a pas encore d'activité : pas de bloc autre membre."""
+    foyer = MembreFoyerFactory().foyer
+    moi = MembreFoyerFactory(foyer=foyer)
+    autre = MembreFoyerFactory(foyer=foyer)
+    autre.user.first_name = "Camille"
+    autre.user.save()
+
+    client = Client()
+    client.force_login(moi.user)
+    response = client.get(
+        reverse("activites:activite-create"), HTTP_HX_REQUEST="true"
+    )
+
+    content = response.content.decode("utf-8")
+    assert "Camille" not in content
+    assert "Pas encore évalué" not in content
+
+
+def test_create_post_avec_eval_cree_l_activite_et_l_evaluation():
+    from evaluations.models import Evaluation
+
+    membre = MembreFoyerFactory()
+    client = Client()
+    client.force_login(membre.user)
+
+    response = client.post(
+        reverse("activites:activite-create"),
+        {
+            "titre": "Faire la vaisselle",
+            "categorie_nom": "Cuisine",
+            "charge_mentale": 4,
+            "charge_physique": 2,
+            "duree": 5,
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    activite = Activite.objects.get(foyer=membre.foyer)
+    evaluation = Evaluation.objects.get(user=membre.user, activite=activite)
+    assert (evaluation.charge_mentale, evaluation.charge_physique, evaluation.duree) == (
+        4,
+        2,
+        5,
+    )
+
+
+def test_create_post_sans_eval_cree_l_activite_seule():
+    from evaluations.models import Evaluation
+
+    membre = MembreFoyerFactory()
+    client = Client()
+    client.force_login(membre.user)
+
+    client.post(
+        reverse("activites:activite-create"),
+        {"titre": "Faire la vaisselle", "categorie_nom": "Cuisine"},
+    )
+
+    activite = Activite.objects.get(foyer=membre.foyer)
+    assert not Evaluation.objects.filter(user=membre.user, activite=activite).exists()
+
+
+def test_create_post_eval_partielle_renvoie_400():
+    """Tout-ou-rien sur l'évaluation : 1 critère sur 3 → form invalide."""
+    membre = MembreFoyerFactory()
+    client = Client()
+    client.force_login(membre.user)
+
+    response = client.post(
+        reverse("activites:activite-create"),
+        {
+            "titre": "Vaisselle",
+            "categorie_nom": "Cuisine",
+            "charge_mentale": 3,
+            # charge_physique et duree manquants
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 400
+    assert Activite.objects.filter(foyer=membre.foyer).count() == 0
+
+
+def test_update_get_htmx_pre_remplit_l_evaluation_existante():
+    from evaluations.tests.factories import EvaluationFactory
+
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer)
+    EvaluationFactory(
+        user=membre.user,
+        activite=activite,
+        charge_mentale=4,
+        charge_physique=2,
+        duree=5,
+    )
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        HTTP_HX_REQUEST="true",
+    )
+
+    content = response.content.decode("utf-8")
+    # Sur les 3 rate-blocks, la pilule cochée correspond à la valeur stockée.
+    assert 'value="4"\n                               checked' in content
+    assert 'value="2"\n                               checked' in content
+    assert 'value="5"\n                               checked' in content
+
+
+def test_update_post_htmx_upsert_evaluation_avec_l_activite():
+    from evaluations.models import Evaluation
+
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer, titre="Avant")
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.post(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        {
+            "titre": "Après",
+            "categorie_nom": "Cuisine",
+            "charge_mentale": 5,
+            "charge_physique": 4,
+            "duree": 3,
+        },
+        HTTP_HX_REQUEST="true",
+    )
+
+    assert response.status_code == 200
+    activite.refresh_from_db()
+    assert activite.titre == "Après"
+    evaluation = Evaluation.objects.get(user=membre.user, activite=activite)
+    assert (evaluation.charge_mentale, evaluation.charge_physique, evaluation.duree) == (
+        5,
+        4,
+        3,
+    )
+
+
+def test_update_drawer_affiche_evaluation_de_l_autre_membre():
+    from evaluations.tests.factories import EvaluationFactory
+    from foyer.tests.factories import FoyerFactory
+
+    foyer = FoyerFactory()
+    moi = MembreFoyerFactory(foyer=foyer)
+    autre = MembreFoyerFactory(foyer=foyer)
+    autre.user.first_name = "Camille"
+    autre.user.save()
+    activite = ActiviteFactory(foyer=foyer)
+    EvaluationFactory(
+        user=autre.user,
+        activite=activite,
+        charge_mentale=5,
+        charge_physique=2,
+        duree=1,
+    )
+
+    client = Client()
+    client.force_login(moi.user)
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        HTTP_HX_REQUEST="true",
+    )
+
+    content = response.content.decode("utf-8")
+    assert "Camille" in content
+    assert "5/5" in content
+
+
+def test_update_drawer_indique_si_autre_membre_n_a_pas_evalue():
+    from foyer.tests.factories import FoyerFactory
+
+    foyer = FoyerFactory()
+    moi = MembreFoyerFactory(foyer=foyer)
+    MembreFoyerFactory(foyer=foyer)
+    activite = ActiviteFactory(foyer=foyer)
+
+    client = Client()
+    client.force_login(moi.user)
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        HTTP_HX_REQUEST="true",
+    )
+
+    content = response.content.decode("utf-8")
+    assert "Pas encore évalué" in content
+
+
+def test_update_drawer_indique_si_user_seul_dans_foyer():
+    membre = MembreFoyerFactory()
+    activite = ActiviteFactory(foyer=membre.foyer)
+
+    client = Client()
+    client.force_login(membre.user)
+    response = client.get(
+        reverse("activites:activite-modifier", kwargs={"activite_id": activite.pk}),
+        HTTP_HX_REQUEST="true",
+    )
+
+    content = response.content.decode("utf-8")
+    assert "seul" in content

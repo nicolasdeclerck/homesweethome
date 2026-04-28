@@ -5,6 +5,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import TemplateView, View
 
+from evaluations.services import (
+    enregistrer_evaluation,
+    get_evaluation,
+    get_evaluation_autre_membre,
+)
 from foyer.models import MembreFoyer
 
 from .forms import ActiviteCreationForm
@@ -65,18 +70,20 @@ def _contexte_liste(foyer, *, user=None):
     }
 
 
-def _contexte_form(foyer, form, *, activite=None):
+def _contexte_form(foyer, form, *, activite=None, user=None):
     """Contexte rendu par `_activite_form.html`, pour création ou édition.
 
     Quand `activite` est None on est en création : action vers
     `activite-create`, libellé « Ajouter ». Sinon on cible la vue de
-    modification de cette activité, avec le libellé « Enregistrer ».
+    modification de cette activité, avec le libellé « Enregistrer », et
+    on expose l'évaluation de l'autre membre du foyer (lecture seule).
     """
     if activite is None:
         form_action = reverse("activites:activite-create")
         submit_label = "Ajouter"
         drawer_title = "Nouvelle activité"
         drawer_sub = "Ajoutez une tâche récurrente du foyer."
+        autre_membre, evaluation_autre = None, None
     else:
         form_action = reverse(
             "activites:activite-modifier",
@@ -84,9 +91,13 @@ def _contexte_form(foyer, form, *, activite=None):
         )
         submit_label = "Enregistrer"
         drawer_title = "Modifier l'activité"
-        drawer_sub = "Modifiez le titre ou la catégorie."
+        drawer_sub = "Ajustez le titre, la catégorie et votre évaluation."
+        autre_membre, evaluation_autre = get_evaluation_autre_membre(
+            foyer=foyer, activite=activite, user=user
+        )
     return {
         "form": form,
+        "activite": activite,
         "categories_existantes": list(
             foyer.categories.order_by("nom").values_list("nom", flat=True)
         ),
@@ -94,7 +105,25 @@ def _contexte_form(foyer, form, *, activite=None):
         "submit_label": submit_label,
         "drawer_title": drawer_title,
         "drawer_sub": drawer_sub,
+        "autre_membre": autre_membre,
+        "evaluation_autre": evaluation_autre,
     }
+
+
+def _initial_form(activite, user):
+    """Pré-remplit le form d'édition avec l'évaluation existante de `user`."""
+    initial = {
+        "titre": activite.titre,
+        "categorie_nom": activite.categorie.nom,
+    }
+    evaluation = get_evaluation(user=user, activite=activite)
+    if evaluation is not None:
+        initial.update({
+            "charge_mentale": evaluation.charge_mentale,
+            "charge_physique": evaluation.charge_physique,
+            "duree": evaluation.duree,
+        })
+    return initial
 
 
 class ActivitesListView(_ActivitesFoyerMixin, TemplateView):
@@ -104,7 +133,13 @@ class ActivitesListView(_ActivitesFoyerMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context.update(_contexte_liste(self.request.foyer, user=self.request.user))
         # Le drawer initial est en mode "création".
-        context.update(_contexte_form(self.request.foyer, ActiviteCreationForm()))
+        context.update(
+            _contexte_form(
+                self.request.foyer,
+                ActiviteCreationForm(),
+                user=self.request.user,
+            )
+        )
         context["active_nav"] = "activites"
         return context
 
@@ -120,7 +155,9 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
             return render(
                 request,
                 self.template_form,
-                _contexte_form(request.foyer, ActiviteCreationForm()),
+                _contexte_form(
+                    request.foyer, ActiviteCreationForm(), user=request.user
+                ),
             )
         return redirect("activites:activite-liste")
 
@@ -133,25 +170,35 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
                 return render(
                     request,
                     self.template_form,
-                    _contexte_form(request.foyer, form),
+                    _contexte_form(request.foyer, form, user=request.user),
                     status=400,
                 )
             context = _contexte_liste(request.foyer, user=request.user)
-            context.update(_contexte_form(request.foyer, form))
+            context.update(_contexte_form(request.foyer, form, user=request.user))
             context["active_nav"] = "activites"
             return render(request, "activites/liste.html", context, status=400)
 
-        creer_activite(
+        activite = creer_activite(
             foyer=request.foyer,
             titre=form.cleaned_data["titre"],
             categorie_nom=form.cleaned_data["categorie_nom"],
         )
+        if form.has_evaluation():
+            enregistrer_evaluation(
+                user=request.user,
+                activite=activite,
+                charge_mentale=form.cleaned_data["charge_mentale"],
+                charge_physique=form.cleaned_data["charge_physique"],
+                duree=form.cleaned_data["duree"],
+            )
 
         if is_htmx:
             response = render(
                 request,
                 self.template_form,
-                _contexte_form(request.foyer, ActiviteCreationForm()),
+                _contexte_form(
+                    request.foyer, ActiviteCreationForm(), user=request.user
+                ),
             )
             response["HX-Trigger"] = "activites-mises-a-jour"
             return response
@@ -174,16 +221,13 @@ class ActiviteUpdateView(_ActivitesFoyerMixin, View):
         activite = self._activite_du_foyer(request, activite_id)
         if request.headers.get("HX-Request") != "true":
             return redirect("activites:activite-liste")
-        form = ActiviteCreationForm(
-            initial={
-                "titre": activite.titre,
-                "categorie_nom": activite.categorie.nom,
-            }
-        )
+        form = ActiviteCreationForm(initial=_initial_form(activite, request.user))
         return render(
             request,
             self.template_form,
-            _contexte_form(request.foyer, form, activite=activite),
+            _contexte_form(
+                request.foyer, form, activite=activite, user=request.user
+            ),
         )
 
     def post(self, request, activite_id):
@@ -196,12 +240,16 @@ class ActiviteUpdateView(_ActivitesFoyerMixin, View):
                 return render(
                     request,
                     self.template_form,
-                    _contexte_form(request.foyer, form, activite=activite),
+                    _contexte_form(
+                        request.foyer, form, activite=activite, user=request.user
+                    ),
                     status=400,
                 )
             context = _contexte_liste(request.foyer, user=request.user)
             context.update(
-                _contexte_form(request.foyer, form, activite=activite)
+                _contexte_form(
+                    request.foyer, form, activite=activite, user=request.user
+                )
             )
             context["active_nav"] = "activites"
             return render(request, "activites/liste.html", context, status=400)
@@ -211,6 +259,14 @@ class ActiviteUpdateView(_ActivitesFoyerMixin, View):
             titre=form.cleaned_data["titre"],
             categorie_nom=form.cleaned_data["categorie_nom"],
         )
+        if form.has_evaluation():
+            enregistrer_evaluation(
+                user=request.user,
+                activite=activite,
+                charge_mentale=form.cleaned_data["charge_mentale"],
+                charge_physique=form.cleaned_data["charge_physique"],
+                duree=form.cleaned_data["duree"],
+            )
 
         if is_htmx:
             # Réponse en mode "création" pour réinitialiser le drawer
@@ -218,7 +274,9 @@ class ActiviteUpdateView(_ActivitesFoyerMixin, View):
             response = render(
                 request,
                 self.template_form,
-                _contexte_form(request.foyer, ActiviteCreationForm()),
+                _contexte_form(
+                    request.foyer, ActiviteCreationForm(), user=request.user
+                ),
             )
             response["HX-Trigger"] = "activites-mises-a-jour"
             return response

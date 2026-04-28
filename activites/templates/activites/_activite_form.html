@@ -55,7 +55,67 @@
             {% endif %}
         </div>
 
-        <div class="btn-row end" style="margin-top: 16px;">
+        <div class="rate-label" style="margin-top: 18px;">Vos évaluations</div>
+        {% for field in form %}
+            {% if field.name == "charge_mentale" or field.name == "charge_physique" or field.name == "duree" %}
+            <div class="rate-block">
+                <div class="rate-label">{{ field.label }}</div>
+                <div class="rate-row" role="radiogroup" aria-label="{{ field.label }}">
+                    {% for note in "12345" %}
+                    <label class="rate-btn{% if field.value|default:3|stringformat:'s' == note %} selected{% endif %}">
+                        <input type="radio"
+                               name="{{ field.name }}"
+                               value="{{ note }}"
+                               {% if field.value|default:3|stringformat:'s' == note %}checked{% endif %}
+                               style="position:absolute;opacity:0;pointer-events:none;">
+                        {{ note }}
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="rate-legend">
+                    <span>1 — peu</span>
+                    <span>5 — beaucoup</span>
+                </div>
+                {% if field.errors %}
+                <div class="field-hint" style="color: var(--accent); margin-top: 6px;">
+                    {{ field.errors|join:" " }}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+
+        {% if form.non_field_errors %}
+        <div class="field-hint" style="color: var(--accent); margin-top: 8px;">
+            {{ form.non_field_errors|join:" " }}
+        </div>
+        {% endif %}
+
+        {% if activite %}
+        <div class="rate-label" style="margin-top: 22px;">
+            {% if autre_membre %}
+                Évaluation de
+                {{ autre_membre.first_name|default:autre_membre.email }}
+            {% else %}
+                Autre membre du foyer
+            {% endif %}
+        </div>
+        {% if autre_membre and evaluation_autre %}
+            <div class="charges-grid">
+                {% include "evaluations/_charge_dots.html" with libelle="Charge mentale" valeur=evaluation_autre.charge_mentale %}
+                {% include "evaluations/_charge_dots.html" with libelle="Charge physique" valeur=evaluation_autre.charge_physique %}
+                {% include "evaluations/_charge_dots.html" with libelle="Durée" valeur=evaluation_autre.duree %}
+            </div>
+        {% elif autre_membre %}
+            <p class="muted" style="margin-top: 8px; font-size: 12px;">Pas encore évalué.</p>
+        {% else %}
+            <p class="muted" style="margin-top: 8px; font-size: 12px;">
+                Vous êtes seul·e dans le foyer pour le moment.
+            </p>
+        {% endif %}
+        {% endif %}
+
+        <div class="btn-row end" style="margin-top: 24px;">
             <button type="button"
                     class="btn btn-ghost"
                     data-drawer-close="ajouter-activite">

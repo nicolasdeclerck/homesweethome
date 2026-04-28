@@ -116,5 +116,34 @@
     // Fermeture automatique après création/édition réussie d'une activité.
     document.body.addEventListener("activites-mises-a-jour", closeDrawer);
 })();
+
+(function () {
+    // Synchronise la classe `.selected` sur les `.rate-btn` du drawer avec
+    // l'état de leurs radios. Délégation sur `body` pour rester actif après
+    // les swaps HTMX du fragment de formulaire.
+    function refreshSelected(row) {
+        row.querySelectorAll(".rate-btn").forEach(function (btn) {
+            const radio = btn.querySelector("input[type=radio]");
+            if (radio && radio.checked) {
+                btn.classList.add("selected");
+            } else {
+                btn.classList.remove("selected");
+            }
+        });
+    }
+
+    function refreshAll() {
+        document.querySelectorAll(".rate-row").forEach(refreshSelected);
+    }
+
+    document.body.addEventListener("change", function (e) {
+        if (e.target.matches(".rate-row input[type=radio]")) {
+            refreshSelected(e.target.closest(".rate-row"));
+        }
+    });
+
+    document.body.addEventListener("htmx:afterSwap", refreshAll);
+    refreshAll();
+})();
 </script>
 {% endblock %}
