@@ -25,10 +25,15 @@
                 {% endif %}
             </p>
         </div>
-        <form method="post" action="{% url 'comptes:deconnexion' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-ghost btn-sm">Se déconnecter</button>
-        </form>
+        {% if est_createur %}
+        <button type="button"
+                class="btn btn-primary"
+                data-modal-open="inviter-membre"
+                aria-haspopup="dialog"
+                aria-controls="modal-inviter-membre">
+            + Inviter un membre
+        </button>
+        {% endif %}
     </header>
 
     <section>
@@ -73,13 +78,6 @@
         </div>
         {% endif %}
 
-        <section style="margin-top: 24px;">
-            <div class="cat-head">Inviter un membre</div>
-            <div id="invitation-form-zone">
-                {% include "foyer/_invitation_form.html" %}
-            </div>
-        </section>
-
         {% if membres|length >= 2 %}
         <a class="next-step" href="{% url 'activites:activite-liste' %}" style="display: block; text-decoration: none; color: inherit;">
             <div class="muted sm">Prochaine étape</div>
@@ -89,4 +87,68 @@
         {% endif %}
     {% endif %}
 </div>
+
+{% if est_createur %}
+<div class="app-modal-overlay"
+     data-modal-overlay="inviter-membre"
+     hidden>
+    <div id="modal-inviter-membre"
+         class="app-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-label="Inviter un membre">
+        <button type="button"
+                class="app-modal-close"
+                data-modal-close="inviter-membre"
+                aria-label="Fermer">
+            {% include "partials/icons/_close.html" %}
+        </button>
+        <div class="app-modal-body" id="invitation-form-zone">
+            {% include "foyer/_invitation_form.html" %}
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const modalName = "inviter-membre";
+    const overlay = document.querySelector('[data-modal-overlay="' + modalName + '"]');
+    const openBtns = document.querySelectorAll('[data-modal-open="' + modalName + '"]');
+    const closeBtns = document.querySelectorAll('[data-modal-close="' + modalName + '"]');
+
+    if (!overlay) return;
+
+    function openModal() {
+        overlay.hidden = false;
+        // Force reflow pour que la transition CSS s'applique.
+        void overlay.offsetWidth;
+        overlay.classList.add("is-open");
+        const firstInput = overlay.querySelector("input, textarea, select");
+        if (firstInput) firstInput.focus();
+    }
+
+    function closeModal() {
+        overlay.classList.remove("is-open");
+        // Attend la fin de la transition avant de masquer pour l'a11y.
+        setTimeout(function () {
+            overlay.hidden = true;
+        }, 150);
+    }
+
+    openBtns.forEach(function (btn) {
+        btn.addEventListener("click", openModal);
+    });
+    closeBtns.forEach(function (btn) {
+        btn.addEventListener("click", closeModal);
+    });
+    overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !overlay.hidden) closeModal();
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

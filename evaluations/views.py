@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.generic import View
@@ -105,16 +105,13 @@ class EvaluationView(_FoyerRequiredMixin, View):
             duree=form.cleaned_data["duree"],
         )
 
-        if is_htmx:
-            # On renvoie le fragment avec un état "Enregistré" et on
-            # déclenche `evaluation-enregistree` pour qu'un retour à la
-            # liste reflète le nouveau label « Évaluée ».
-            contexte = _contexte_form(
-                request=request, activite=activite, form=form, succes=True
-            )
-            response = render(request, self.template_form, contexte)
-            response["HX-Trigger"] = "evaluation-enregistree"
-            return response
-
         messages.success(request, "Évaluation enregistrée.")
-        return redirect(reverse("activites:activite-liste"))
+        url_liste = reverse("activites:activite-liste")
+        if is_htmx:
+            # `HX-Redirect` demande à HTMX de naviguer côté client vers la
+            # liste : le message succès ajouté ci-dessus sera affiché au
+            # prochain rendu (il vit dans la session).
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = url_liste
+            return response
+        return redirect(url_liste)

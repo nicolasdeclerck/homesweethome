@@ -1,7 +1,13 @@
-{# Affiche un score de charge 1→5 en dots verticaux (P3 du design system).
-   Args : libelle (str), valeur (int 1-5). #}
+{% comment %}
+Affiche un score de charge 1→5 en dots verticaux (P3 du design system).
+Args : libelle (str), valeur (int 1-5).
+
+Conçu pour vivre à l'intérieur d'un parent `.charges-grid` qui aligne les
+trois colonnes (libellé, dots, valeur numérique) sur plusieurs lignes via
+`display: contents` sur `.charge`.
+{% endcomment %}
 {% with valeur=valeur|default:0 %}
-<div class="charge {% if valeur <= 2 %}charge-low{% elif valeur == 3 %}charge-mid{% else %}charge-high{% endif %}" style="margin-top: 12px;">
+<div class="charge">
     <span class="charge-label">{{ libelle }}</span>
     <span class="charge-dots" aria-hidden="true">
         {% for i in "12345" %}

@@ -147,7 +147,7 @@ def test_post_cree_l_evaluation_redirect_fallback():
     assert evaluation.duree == 2
 
 
-def test_post_htmx_renvoie_fragment_avec_hx_trigger():
+def test_post_htmx_redirige_vers_la_liste_des_activites():
     membre = MembreFoyerFactory()
     activite = ActiviteFactory(foyer=membre.foyer)
     client = Client()
@@ -159,10 +159,9 @@ def test_post_htmx_renvoie_fragment_avec_hx_trigger():
         headers={"hx-request": "true"},
     )
 
-    assert response.status_code == 200
-    assert response["HX-Trigger"] == "evaluation-enregistree"
-    content = response.content.decode("utf-8")
-    assert "Évaluation enregistrée." in content
+    assert response.status_code == 204
+    assert response["HX-Redirect"] == reverse("activites:activite-liste")
+    assert Evaluation.objects.filter(user=membre.user, activite=activite).exists()
 
 
 def test_post_met_a_jour_l_evaluation_existante():
