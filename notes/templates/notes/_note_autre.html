@@ -1,0 +1,38 @@
+{# Fragment : note d'un autre membre du foyer, avec ses commentaires en marge. #}
+{% load notes_extras %}
+<article class="note-card autre" data-note-id="{{ entry.note.pk }}">
+    <header class="note-card-head">
+        <div>
+            <h3 class="note-author">{{ entry.note.membre.user|nom_membre }}</h3>
+            <p class="muted sm">
+                {% if entry.note.contenu %}
+                    Mise à jour {{ entry.note.date_maj|timesince }}
+                {% else %}
+                    Aucune note rédigée pour le moment
+                {% endif %}
+            </p>
+        </div>
+    </header>
+
+    {% if entry.note.contenu %}
+    <div class="note-with-comments">
+        <div class="note-content"
+             id="note-content-{{ entry.note.pk }}"
+             data-note-id="{{ entry.note.pk }}"
+             data-commentable="true">{{ entry.note.contenu }}</div>
+        <aside class="note-margin"
+               id="note-margin-{{ entry.note.pk }}"
+               data-note-id="{{ entry.note.pk }}">
+            {% for commentaire in entry.commentaires_actifs %}
+                {% include "notes/_commentaire.html" with commentaire=commentaire note=entry.note %}
+            {% endfor %}
+        </aside>
+    </div>
+    {% else %}
+    <p class="muted">Aucun contenu pour cette note.</p>
+    {% endif %}
+
+    {% if entry.commentaires_orphelins %}
+    {% include "notes/_orphelins.html" with orphelins=entry.commentaires_orphelins est_proprietaire=False %}
+    {% endif %}
+</article>

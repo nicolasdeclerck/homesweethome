@@ -1471,3 +1471,288 @@ html.no-grid {
   padding: 8px 14px;
   font-size: 12px;
 }
+
+/* ── Sidebar nav badge (compteur non-lus) ─── */
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 16px;
+}
+.sb-item.active .nav-badge { background: var(--accent); }
+
+/* ── Notes — page principale ──────────────── */
+.notes-section {
+  margin-top: 24px;
+}
+.notes-section + .notes-section {
+  margin-top: 32px;
+}
+.notes-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+
+.note-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  background: var(--bg);
+  margin-bottom: 16px;
+}
+.note-card.mienne {
+  background: var(--paper);
+  border-color: var(--line-strong);
+}
+.note-card.autre {
+  background: var(--bg);
+}
+.note-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.note-author {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 2px;
+  color: var(--ink);
+}
+.note-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  padding: 4px 0;
+}
+.note-content.read-only {
+  font-size: 14px;
+  line-height: 1.55;
+}
+.note-content[data-commentable="true"] {
+  cursor: text;
+  user-select: text;
+}
+.note-content[data-commentable="true"]::selection {
+  background: rgba(193, 106, 77, 0.25);
+}
+
+/* ── Notes — layout note + marge des commentaires ─── */
+.note-with-comments {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  position: relative;
+  align-items: start;
+}
+.note-margin {
+  position: relative;
+  min-height: 100%;
+}
+.comment-anchored {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: top 0.15s ease;
+}
+.comment-anchored.is-positioned {
+  opacity: 1;
+}
+.comment-anchored.is-misplaced {
+  display: none;
+}
+.comment-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.comment-author {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.comment-body {
+  margin: 0;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.comment-delete {
+  margin-left: auto;
+  padding: 2px 4px;
+  border: 0;
+  color: var(--muted);
+}
+.comment-delete:hover {
+  color: var(--accent);
+  background: transparent;
+}
+
+/* ── Notes — bulle flottante "Commenter ce passage" ─── */
+.comment-bubble {
+  position: absolute;
+  z-index: 50;
+  background: var(--ink);
+  color: white;
+  border: 0;
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.comment-bubble:hover {
+  background: #000;
+}
+
+/* ── Notes — mini-formulaire flottant ─── */
+.comment-form-floating {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 30;
+}
+.comment-form-floating textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+/* ── Notes — édition de ma note ─── */
+.note-card.edition .note-form { margin-top: 8px; }
+.note-textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  resize: vertical;
+  min-height: 200px;
+}
+
+/* ── Notes — commentaires reçus sous ma note ─── */
+.commentaires-mienne {
+  margin-top: 18px;
+  border-top: 1px dashed var(--line);
+  padding-top: 14px;
+}
+.commentaires-mienne-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.commentaires-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.commentaire-mien {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.commentaire-extrait {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 12px;
+  border-left: 2px solid var(--accent);
+  padding-left: 8px;
+}
+.commentaire-meta {
+  margin: 0 0 6px;
+}
+.commentaire-contenu {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ── Notes — commentaires orphelins ─── */
+.orphelins {
+  margin-top: 18px;
+  border-top: 1px dashed var(--line);
+  padding-top: 14px;
+}
+.orphelins-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.orphelins-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.orphelin-item {
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.orphelin-extrait {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 12px;
+  text-decoration: line-through;
+  text-decoration-color: var(--line-strong);
+}
+.orphelin-contenu {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
+/* ── Responsive notes ─── */
+@media (max-width: 720px) {
+  .note-with-comments {
+    grid-template-columns: 1fr;
+  }
+  .note-margin {
+    position: static;
+  }
+  .comment-anchored,
+  .comment-form-floating {
+    position: static;
+    margin-bottom: 8px;
+  }
+}

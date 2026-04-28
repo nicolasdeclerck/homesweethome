@@ -54,6 +54,10 @@ recouvre alors tout l'écran et se referme via le bouton « X ».
                        {% if active_nav == item.key %}aria-current="page"{% endif %}>
                         {% include "partials/icons/_"|add:item.icon|add:".html" %}
                         {{ item.label }}
+                        {% if item.key == "notes" and notes_non_lus %}
+                        <span class="nav-badge"
+                              aria-label="{{ notes_non_lus }} commentaire{{ notes_non_lus|pluralize }} non lu{{ notes_non_lus|pluralize }}">{{ notes_non_lus }}</span>
+                        {% endif %}
                     </a>
                     {% endif %}
                 </li>

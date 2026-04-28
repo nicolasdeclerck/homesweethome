@@ -1,0 +1,56 @@
+{# Fragment : ma propre note en mode lecture (carte avec contenu + bouton "Modifier"). #}
+{% load notes_extras %}
+<article class="note-card mienne">
+    <header class="note-card-head">
+        <div>
+            <h3 class="note-author">Vous</h3>
+            <p class="muted sm">
+                {% if ma_note.note.contenu %}
+                    Mise à jour {{ ma_note.note.date_maj|timesince }}
+                {% else %}
+                    Aucune note rédigée pour le moment
+                {% endif %}
+            </p>
+        </div>
+        <button type="button"
+                class="btn btn-ghost btn-sm"
+                hx-get="{% url 'notes:ma-note' %}"
+                hx-target="#ma-note-zone"
+                hx-swap="innerHTML">
+            {% include "partials/icons/_pencil.html" %}
+            Modifier
+        </button>
+    </header>
+
+    {% if ma_note.note.contenu %}
+    <div class="note-content read-only">{{ ma_note.note.contenu }}</div>
+    {% else %}
+    <p class="muted">
+        Cliquez sur « Modifier » pour rédiger votre note. Les autres membres
+        du foyer pourront ensuite y attacher des commentaires.
+    </p>
+    {% endif %}
+
+    {% if ma_note.commentaires_actifs %}
+    <section class="commentaires-mienne">
+        <h4 class="commentaires-mienne-title">
+            Commentaires reçus ({{ ma_note.commentaires_actifs|length }})
+        </h4>
+        <ul class="commentaires-list">
+            {% for commentaire in ma_note.commentaires_actifs %}
+            <li class="commentaire-mien" data-commentaire-id="{{ commentaire.pk }}">
+                <p class="commentaire-extrait">« {{ commentaire.extrait }} »</p>
+                <p class="commentaire-meta muted sm">
+                    {{ commentaire.auteur|nom_membre }} · {{ commentaire.date_creation|timesince }}
+                </p>
+                <p class="commentaire-contenu">{{ commentaire.contenu }}</p>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if ma_note.commentaires_orphelins %}
+    {% include "notes/_orphelins.html" with orphelins=ma_note.commentaires_orphelins est_proprietaire=True %}
+    {% endif %}
+</article>

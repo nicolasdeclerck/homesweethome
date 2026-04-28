@@ -33,6 +33,13 @@ _NAV_ITEMS = (
         "url_name": "planification:periode-liste",
         "bientot": False,
     },
+    {
+        "key": "notes",
+        "label": "Notes",
+        "icon": "note",
+        "url_name": "notes:liste",
+        "bientot": False,
+    },
 )
 
 
