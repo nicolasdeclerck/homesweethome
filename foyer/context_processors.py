@@ -19,6 +19,13 @@ _NAV_ITEMS = (
         "url_name": "foyer:mon-foyer",
         "bientot": False,
     },
+    {
+        "key": "activites",
+        "label": "Activités",
+        "icon": "list",
+        "url_name": "activites:activite-liste",
+        "bientot": False,
+    },
 )
 
 

@@ -1,0 +1,33 @@
+{% if oob_compteur %}
+{# OOB : tient à jour le compteur du sous-titre lors d'un refresh HTMX. #}
+{# Activé uniquement dans la réponse fragment, pas dans le rendu page initial. #}
+<span id="activites-compteur" hx-swap-oob="true">{{ nb_activites }} activité{{ nb_activites|pluralize }}</span>
+{% endif %}
+<div id="activites-liste-zone"
+     hx-get="{% url 'activites:activite-liste-fragment' %}"
+     hx-trigger="activites-mises-a-jour from:body"
+     hx-swap="outerHTML">
+    {% if activites_par_categorie %}
+        {% for categorie, activites in activites_par_categorie.items %}
+        <div class="cat-head">{{ categorie.nom }}</div>
+        {% for activite in activites %}
+        <div class="card">
+            <div class="card-row">
+                <div class="card-grow">
+                    <div class="card-title">{{ activite.titre }}</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endfor %}
+    {% else %}
+        <div class="empty">
+            <div class="empty-illu" aria-hidden="true"></div>
+            <div class="empty-title">Aucune activité pour le moment</div>
+            <div class="empty-sub">
+                Ajoutez la première tâche commune à votre foyer
+                à l'aide du formulaire ci-dessus.
+            </div>
+        </div>
+    {% endif %}
+</div>

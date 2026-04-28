@@ -9,4 +9,4 @@ def test_app_is_installed():
 
 def test_urls_module_is_importable():
     assert activites_urls.app_name == "activites"
-    assert activites_urls.urlpatterns == []
+    assert len(activites_urls.urlpatterns) >= 1
