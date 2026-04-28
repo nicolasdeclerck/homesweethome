@@ -26,6 +26,13 @@ _NAV_ITEMS = (
         "url_name": "activites:activite-liste",
         "bientot": False,
     },
+    {
+        "key": "planification",
+        "label": "Planification",
+        "icon": "calendar",
+        "url_name": "planification:periode-liste",
+        "bientot": False,
+    },
 )
 
 

@@ -1,0 +1,37 @@
+{% if oob_compteur %}
+{# OOB : tient à jour le compteur du sous-titre lors d'un refresh HTMX. #}
+{# Activé uniquement dans la réponse fragment, pas dans le rendu page initial. #}
+<span id="periodes-compteur" hx-swap-oob="true">{{ nb_periodes }} période{{ nb_periodes|pluralize }}</span>
+{% endif %}
+<div id="periodes-liste-zone"
+     hx-get="{% url 'planification:periode-liste-fragment' %}"
+     hx-trigger="periodes-mises-a-jour from:body"
+     hx-swap="outerHTML">
+    {% if periodes %}
+        <div class="act-list">
+            {% for periode in periodes %}
+            <div class="act-row">
+                <a class="act-row-link"
+                   href="{% url 'planification:periode-detail' periode_id=periode.pk %}"
+                   aria-label="Ouvrir la période du {{ periode.date_debut|date:'d/m/Y' }} au {{ periode.date_fin|date:'d/m/Y' }}">
+                    <div class="act-grow">
+                        <div class="act-title">
+                            Du {{ periode.date_debut|date:"d/m/Y" }}
+                            au {{ periode.date_fin|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty">
+            <div class="empty-illu" aria-hidden="true"></div>
+            <div class="empty-title">Aucune période pour le moment</div>
+            <div class="empty-sub">
+                Créez votre première période de planification
+                via le bouton « + Ajouter une période ».
+            </div>
+        </div>
+    {% endif %}
+</div>

@@ -1,0 +1,65 @@
+<header class="drawer-head">
+    <div class="drawer-head-row">
+        <div>
+            <h2 id="drawer-ajouter-periode-titre" class="drawer-title">{{ drawer_title }}</h2>
+            <p class="drawer-sub">{{ drawer_sub }}</p>
+        </div>
+        <button type="button"
+                class="btn btn-ghost btn-sm drawer-close"
+                data-drawer-close="ajouter-periode"
+                aria-label="Fermer">
+            ×
+        </button>
+    </div>
+</header>
+
+<div class="drawer-body">
+    <form method="post"
+          action="{{ form_action }}"
+          hx-post="{{ form_action }}"
+          hx-target="#periode-form-zone"
+          hx-swap="innerHTML"
+          class="drawer-form"
+          novalidate>
+        {% csrf_token %}
+
+        <div class="field">
+            <label for="{{ form.date_debut.id_for_label }}" class="field-label">
+                {{ form.date_debut.label }}
+            </label>
+            {{ form.date_debut }}
+            {% if form.date_debut.errors %}
+            <div class="field-hint" style="color: var(--accent);">
+                {{ form.date_debut.errors|join:" " }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ form.date_fin.id_for_label }}" class="field-label">
+                {{ form.date_fin.label }}
+            </label>
+            {{ form.date_fin }}
+            {% if form.date_fin.errors %}
+            <div class="field-hint" style="color: var(--accent);">
+                {{ form.date_fin.errors|join:" " }}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="field-hint" style="color: var(--accent); margin-top: 8px;">
+            {{ form.non_field_errors|join:" " }}
+        </div>
+        {% endif %}
+
+        <div class="btn-row end" style="margin-top: 24px;">
+            <button type="button"
+                    class="btn btn-ghost"
+                    data-drawer-close="ajouter-periode">
+                Annuler
+            </button>
+            <button type="submit" class="btn btn-primary">{{ submit_label }}</button>
+        </div>
+    </form>
+</div>

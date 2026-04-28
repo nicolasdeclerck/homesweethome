@@ -1,0 +1,48 @@
+<div id="affectations-liste-zone">
+    <div class="act-list">
+        {% for jour, affectations in affectations_par_jour.items %}
+        <div class="act-cat-head">
+            <span class="act-cat-name">{{ jour|date:"l d F Y"|capfirst }}</span>
+            <span class="act-cat-count">{{ affectations|length }}</span>
+        </div>
+        {% for affectation in affectations %}
+        <div class="act-row">
+            <div class="act-row-link" style="cursor: default;">
+                <div class="act-grow">
+                    <div class="act-title">{{ affectation.activite.titre }}</div>
+                </div>
+                <span class="ev-pill ev-done">
+                    {{ affectation.membre.user.first_name|default:affectation.membre.user.email }}
+                </span>
+            </div>
+            <form method="post"
+                  action="{% url 'planification:affectation-delete' affectation_id=affectation.pk %}"
+                  hx-post="{% url 'planification:affectation-delete' affectation_id=affectation.pk %}"
+                  hx-target="#affectations-liste-zone"
+                  hx-swap="outerHTML"
+                  style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit"
+                        class="act-row-edit-btn"
+                        aria-label="Supprimer l'affectation {{ affectation.activite.titre }}">
+                    ×
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+        <div class="act-row act-row-pending">
+            <button type="button"
+                    class="act-row-link"
+                    data-drawer-open="ajouter-affectation"
+                    data-jour="{{ jour|date:'Y-m-d' }}"
+                    aria-label="Ajouter une affectation pour {{ jour|date:'d/m/Y' }}">
+                <div class="act-grow">
+                    <div class="act-title" style="font-style: italic;">
+                        + Ajouter une affectation
+                    </div>
+                </div>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>

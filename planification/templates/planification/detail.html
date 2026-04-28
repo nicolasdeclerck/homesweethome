@@ -1,0 +1,105 @@
+{% extends "app_base.html" %}
+
+{% block title %}Période — HomeSweetHome{% endblock %}
+
+{% block app_content %}
+<div class="content-medium">
+    <header class="page-head">
+        <div>
+            <a href="{% url 'planification:periode-liste' %}" class="muted" style="text-decoration: none; font-size: 12px;">
+                ← Périodes
+            </a>
+            <h1 class="page-title">
+                Période du {{ periode.date_debut|date:"d/m/Y" }}
+                au {{ periode.date_fin|date:"d/m/Y" }}
+            </h1>
+            <p class="muted">{{ foyer.nom }}</p>
+        </div>
+    </header>
+
+    <section style="margin-top: 16px;">
+        {% include "planification/_affectations_liste.html" %}
+    </section>
+</div>
+
+<div class="drawer-overlay"
+     data-drawer-overlay="ajouter-affectation"
+     hidden></div>
+
+<aside id="drawer-ajouter-affectation"
+       class="drawer"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="drawer-ajouter-affectation-titre"
+       hidden>
+    <div id="affectation-form-zone">
+        {% include "planification/_affectation_form.html" %}
+    </div>
+</aside>
+
+<script>
+(function () {
+    const drawerName = "ajouter-affectation";
+    const drawer = document.getElementById("drawer-" + drawerName);
+    const overlay = document.querySelector('[data-drawer-overlay="' + drawerName + '"]');
+    const jourInput = document.getElementById("affectation-form-jour");
+    const jourLibelle = document.getElementById("affectation-form-jour-libelle");
+
+    if (!drawer || !overlay) return;
+
+    function openDrawer(jour) {
+        if (jour && jourInput) jourInput.value = jour;
+        if (jour && jourLibelle) {
+            // Format ISO YYYY-MM-DD → DD/MM/YYYY pour le sous-titre.
+            const parts = jour.split("-");
+            if (parts.length === 3) {
+                jourLibelle.textContent = "Pour le " + parts[2] + "/" + parts[1] + "/" + parts[0] + ".";
+            }
+        }
+        drawer.hidden = false;
+        overlay.hidden = false;
+        void drawer.offsetWidth;
+        drawer.classList.add("is-open");
+        overlay.classList.add("is-open");
+        const firstSelect = drawer.querySelector("select");
+        if (firstSelect) firstSelect.focus();
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("is-open");
+        overlay.classList.remove("is-open");
+        setTimeout(function () {
+            drawer.hidden = true;
+            overlay.hidden = true;
+        }, 200);
+    }
+
+    document.addEventListener("click", function (e) {
+        const opener = e.target.closest('[data-drawer-open="' + drawerName + '"]');
+        if (opener) {
+            openDrawer(opener.dataset.jour);
+        }
+        if (e.target.closest('[data-drawer-close="' + drawerName + '"]')) {
+            closeDrawer();
+        }
+    });
+    overlay.addEventListener("click", closeDrawer);
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !drawer.hidden) closeDrawer();
+    });
+
+    // Ferme le drawer après un POST HTMX réussi de création d'affectation.
+    // On écoute la fin du swap sur la zone de liste et on ferme si on est ouvert.
+    document.body.addEventListener("htmx:afterSwap", function (e) {
+        if (e.detail && e.detail.target && e.detail.target.id === "affectations-liste-zone"
+            && !drawer.hidden) {
+            closeDrawer();
+            // Reset des selects pour la prochaine ouverture.
+            const form = document.getElementById("affectation-form");
+            if (form) form.reset();
+        }
+    });
+})();
+</script>
+{% endblock %}
