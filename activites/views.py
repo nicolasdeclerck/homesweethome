@@ -112,7 +112,6 @@ class ActiviteCreateView(_ActivitesFoyerMixin, View):
                             "nom", flat=True
                         )
                     ),
-                    "succes": True,
                 },
             )
             response["HX-Trigger"] = "activites-mises-a-jour"
