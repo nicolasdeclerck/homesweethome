@@ -20,11 +20,11 @@
         <div class="rate-label">{{ field.label }}</div>
         <div class="rate-row" role="radiogroup" aria-label="{{ field.label }}">
             {% for note in "12345" %}
-            <label class="rate-btn{% if field.value|stringformat:'s' == note %} selected{% endif %}">
+            <label class="rate-btn{% if field.value|default:3|stringformat:'s' == note %} selected{% endif %}">
                 <input type="radio"
                        name="{{ field.name }}"
                        value="{{ note }}"
-                       {% if field.value|stringformat:'s' == note %}checked{% endif %}
+                       {% if field.value|default:3|stringformat:'s' == note %}checked{% endif %}
                        style="position:absolute;opacity:0;pointer-events:none;">
                 {{ note }}
             </label>
