@@ -1441,6 +1441,17 @@ html.no-grid {
 }
 .drawer-form .field input { width: 100%; }
 
+/* Cible HTMX du drawer activités. Doit relayer la chaîne flex de `.drawer`
+   pour que `.drawer-body { flex:1; overflow-y:auto }` reprenne effet — sinon
+   le formulaire déborde silencieusement quand il dépasse la hauteur du
+   viewport (ex. mobile + 3 rate-blocks + bloc autre membre). */
+#activite-form-zone {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 480px) {
   .drawer { width: 100vw; max-width: 100vw; border-left: 0; }
 }
